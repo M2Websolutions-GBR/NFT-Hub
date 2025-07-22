@@ -1,6 +1,35 @@
-export const register = (req, res) => {
-  console.log('Register Request Body:', req.body);
-  res.status(200).json({ message: 'Register endpoint reached (no DB yet)' });
+import bcrypt from 'bcryptjs';
+import User from '../models/user.js';
+
+export const register = async (req, res) => {
+  try {
+    const { username, email, password, role } = req.body;
+
+    // Check auf vorhandene E-Mail oder Username
+    const existingUser = await User.findOne({ $or: [{ email }, { username }] });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
+
+    // Passwort hashen
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // User anlegen
+    const newUser = new User({
+      username,
+      email,
+      password: hashedPassword,
+      role: role || 'buyer' // falls z. B. creator ausgewählt wird
+    });
+
+    await newUser.save();
+
+    res.status(201).json({ message: 'User registered successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error during registration' });
+  }
 };
 
 export const login = (req, res) => {
