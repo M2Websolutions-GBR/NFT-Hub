@@ -7,3 +7,15 @@ router.post('/register', register);
 router.post('/login', login);
 
 export default router;
+
+
+
+// Admin-only
+router.get('/admin/check', verifyToken, isAdmin, (req, res) => {
+  res.json({ message: 'Welcome, admin.' });
+});
+
+// Creator-only
+router.get('/creator/check', verifyToken, isCreator, (req, res) => {
+  res.json({ message: 'Welcome, creator.' });
+});
