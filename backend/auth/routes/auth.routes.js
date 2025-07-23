@@ -10,12 +10,12 @@ export default router;
 
 
 
-// Admin-only
-router.get('/admin/check', verifyToken, isAdmin, (req, res) => {
-  res.json({ message: 'Welcome, admin.' });
-});
+// // Admin-only
+// router.get('/admin/check', verifyToken, isAdmin, (req, res) => {
+//   res.json({ message: 'Welcome, admin.' });
+// });
 
-// Creator-only
-router.get('/creator/check', verifyToken, isCreator, (req, res) => {
-  res.json({ message: 'Welcome, creator.' });
-});
+// // Creator-only
+// router.get('/creator/check', verifyToken, isCreator, (req, res) => {
+//   res.json({ message: 'Welcome, creator.' });
+// });
