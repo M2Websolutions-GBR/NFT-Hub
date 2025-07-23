@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import User from '../models/user.js';
+import jwt from 'jsonwebtoken';
 
 export const register = async (req, res) => {
   try {
@@ -49,9 +50,21 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: 'Invalid email or password' });
     }
 
-    // Erfolgreich eingeloggt
+    // JWT erstellen
+    const token = jwt.sign(
+      {
+        id: user._id,
+        role: user.role,
+        email: user.email
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '2h' } // oder '7d' etc.
+    );
+
+    // Antwort
     res.status(200).json({
       message: 'Login successful',
+      token,
       user: {
         id: user._id,
         username: user.username,
@@ -66,3 +79,4 @@ export const login = async (req, res) => {
     res.status(500).json({ message: 'Server error during login' });
   }
 };
+
