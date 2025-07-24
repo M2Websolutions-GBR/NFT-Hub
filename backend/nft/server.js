@@ -9,12 +9,12 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3002;
 
+app.use(cors());
+app.use(express.json());
 DBconnection();
 
 app.use('/api/nft', nftRoutes);
 
-app.use(cors());
-app.use(express.json());
 
 
 

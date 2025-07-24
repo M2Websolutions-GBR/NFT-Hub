@@ -2,8 +2,8 @@ import NFT from '../models/nft.js';
 
 export const uploadNFT = async (req, res) => {
   try {
-    const { title, description, imageUrl, price, creatorId, editionLimit } = req.body;
-
+    const { title, description, imageUrl, price, editionLimit } = req.body;
+    const creatorId = req.user.id; // aus dem JWT
     // Grundvalidierung
     if (!title || !imageUrl || !price || !creatorId) {
       return res.status(400).json({ message: 'Missing required fields' });
