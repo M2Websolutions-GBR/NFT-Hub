@@ -26,3 +26,13 @@ export const uploadNFT = async (req, res) => {
     res.status(500).json({ message: 'Error creating NFT' });
   }
 };
+
+export const getAllNFTs = async (req, res) => {
+  try {
+    const nfts = await NFT.find().sort({ createdAt: -1 }); // Neueste zuerst
+    res.status(200).json(nfts);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error fetching NFTs' });
+  }
+};
