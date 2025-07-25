@@ -1,30 +1,48 @@
 import NFT from '../models/nft.js';
+import cloudinary from '../config/cloudinary.js';
 import axios from 'axios';
 
 export const uploadNFT = async (req, res) => {
   try {
-    const { title, description, imageUrl, price, editionLimit } = req.body;
-    const creatorId = req.user.id; // aus dem JWT
-    // Grundvalidierung
-    if (!title || !imageUrl || !price || !creatorId) {
-      return res.status(400).json({ message: 'Missing required fields' });
+    const { title, description, price, editionLimit } = req.body;
+    const file = req.file;
+    const creatorId = req.user.id;
+
+    if (!title || !price || !file) {
+      return res.status(400).json({ message: 'Missing required fields or image' });
     }
 
-    const newNFT = new NFT({
-      title,
-      description,
-      imageUrl,
-      price,
-      creatorId,
-      editionLimit,
-    });
+    // Bild zu Cloudinary hochladen
+    const uploadResult = await cloudinary.uploader.upload_stream(
+      { resource_type: 'image' },
+      async (error, result) => {
+        if (error) {
+          console.error('Cloudinary upload error:', error);
+          return res.status(500).json({ message: 'Cloudinary upload failed' });
+        }
 
-    await newNFT.save();
+        // Neues NFT erstellen
+        const newNFT = new NFT({
+          title,
+          description,
+          imageUrl: result.secure_url,
+          price,
+          editionLimit,
+          creatorId,
+        });
 
-    res.status(201).json({ message: 'NFT created successfully', nft: newNFT });
+        await newNFT.save();
+
+        res.status(201).json({ message: 'NFT created', nft: newNFT });
+      }
+    );
+
+    // Upload starten
+    uploadResult.end(file.buffer);
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Error creating NFT' });
+    console.error('Error creating NFT:', err.message);
+    res.status(500).json({ message: 'Error uploading NFT' });
   }
 };
 
