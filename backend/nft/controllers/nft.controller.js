@@ -56,6 +56,38 @@ export const getAllNFTs = async (req, res) => {
   }
 };
 
+
+export const getNFTById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const nft = await NFT.findById(id);
+    if (!nft) {
+      return res.status(404).json({ message: 'NFT not found' });
+    }
+
+    // Creator-Daten vom auth-service holen
+    const response = await axios.get(`http://server-auth:3001/api/auth/user/${nft.creatorId}`);
+   
+    const creator = response.data;
+
+    res.status(200).json({
+      nft,
+      creator: {
+        _id: creator._id,
+        username: creator.username,
+        email: creator.email,
+        role: creator.role,
+      }
+    });
+  } catch (err) {
+    console.error('Error fetching NFT with creator info:', err.message);
+    res.status(500).json({ message: 'Error fetching NFT or creator data' });
+  }
+};
+
+
+
 export const getMyNFTs = async (req, res) => {
   try {
     const creatorId = req.user.id;

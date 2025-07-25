@@ -1,5 +1,5 @@
 import express from 'express';
-import { uploadNFT, getAllNFTs, getMyNFTs, getCreatorProfile } from '../controllers/nft.controller.js';
+import { uploadNFT, getAllNFTs, getMyNFTs, getCreatorProfile, getNFTById } from '../controllers/nft.controller.js';
 import { verifyToken, isCreator } from '../middleware/auth.middleware.js';
 import upload from '../middleware/upload.middleware.js';
 
@@ -10,5 +10,7 @@ router.post('/', verifyToken, isCreator, upload.single('image'), uploadNFT);
 router.get('/', getAllNFTs); // Öffentliche Route
 router.get('/mine', verifyToken, isCreator, getMyNFTs); // geschützt für Creator
 router.get('/creator/:creatorId', getCreatorProfile);
+router.get('/:id', getNFTById); // muss ganz unten stehen!
+
 
 export default router;
