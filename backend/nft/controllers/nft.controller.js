@@ -46,6 +46,33 @@ export const uploadNFT = async (req, res) => {
   }
 };
 
+export const updateNFT = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const creatorId = req.user.id;
+    const updates = req.body;
+
+    const nft = await NFT.findById(id);
+    if (!nft) {
+      return res.status(404).json({ message: 'NFT not found' });
+    }
+
+    // Berechtigungsprüfung
+    if (nft.creatorId.toString() !== creatorId) {
+      return res.status(403).json({ message: 'Not authorized to update this NFT' });
+    }
+
+    // Update durchführen
+    Object.assign(nft, updates);
+    const updatedNFT = await nft.save();
+
+    res.status(200).json({ message: 'NFT updated', nft: updatedNFT });
+  } catch (err) {
+    console.error('Error updating NFT:', err.message);
+    res.status(500).json({ message: 'Error updating NFT' });
+  }
+};
+
 export const getAllNFTs = async (req, res) => {
   try {
     const nfts = await NFT.find().sort({ createdAt: -1 }); // Neueste zuerst
