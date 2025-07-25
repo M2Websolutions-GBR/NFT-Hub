@@ -15,6 +15,10 @@ const NFTSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    imagePublicId: {
+      type: String,
+      required: true
+    },
     price: {
       type: Number,
       required: true,
@@ -27,6 +31,10 @@ const NFTSchema = new mongoose.Schema(
     isSoldOut: {
       type: Boolean,
       default: false,
+    },
+    soldCount: {
+      type: Number,
+      default: 0
     },
     editionLimit: {
       type: Number,

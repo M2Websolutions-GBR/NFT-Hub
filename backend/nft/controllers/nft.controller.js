@@ -26,6 +26,7 @@ export const uploadNFT = async (req, res) => {
           title,
           description,
           imageUrl: result.secure_url,
+          imagePublicId: result.public_id,
           price,
           editionLimit,
           creatorId,
@@ -73,6 +74,39 @@ export const updateNFT = async (req, res) => {
   }
 };
 
+export const deleteNFT = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const creatorId = req.user.id;
+
+    const nft = await NFT.findById(id);
+    if (!nft) {
+      return res.status(404).json({ message: 'NFT not found' });
+    }
+
+    if (nft.creatorId.toString() !== creatorId) {
+      return res.status(403).json({ message: 'Not authorized to delete this NFT' });
+    }
+
+    if (nft.soldCount > 0) {
+      return res.status(400).json({ message: 'NFT cannot be deleted after it has been sold' });
+    }
+
+    // Bild bei Cloudinary löschen
+    if (nft.imagePublicId) {
+      await cloudinary.uploader.destroy(nft.imagePublicId);
+    }
+
+    await NFT.findByIdAndDelete(id);
+
+    res.status(200).json({ message: 'NFT and image deleted successfully' });
+
+  } catch (err) {
+    console.error('Error deleting NFT:', err.message);
+    res.status(500).json({ message: 'Error deleting NFT' });
+  }
+};
+
 export const getAllNFTs = async (req, res) => {
   try {
     const nfts = await NFT.find().sort({ createdAt: -1 }); // Neueste zuerst
@@ -82,7 +116,6 @@ export const getAllNFTs = async (req, res) => {
     res.status(500).json({ message: 'Error fetching NFTs' });
   }
 };
-
 
 export const getNFTById = async (req, res) => {
   try {
@@ -95,7 +128,7 @@ export const getNFTById = async (req, res) => {
 
     // Creator-Daten vom auth-service holen
     const response = await axios.get(`http://server-auth:3001/api/auth/user/${nft.creatorId}`);
-   
+
     const creator = response.data;
 
     res.status(200).json({
@@ -112,8 +145,6 @@ export const getNFTById = async (req, res) => {
     res.status(500).json({ message: 'Error fetching NFT or creator data' });
   }
 };
-
-
 
 export const getMyNFTs = async (req, res) => {
   try {
