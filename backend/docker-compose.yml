@@ -21,6 +21,21 @@ services:
     depends_on:
       - mongodb
 
+  nft-service:
+    build:
+      context: ./nft
+    container_name: nft-service
+    ports:
+      - "3002:3002"
+    env_file:
+      - ./nft/config/.env
+    volumes:
+      - ./nft:/app
+      - /app/node_modules
+    depends_on:
+      - mongodb
+
+
   mongo-express:
     image: mongo-express
     restart: always
