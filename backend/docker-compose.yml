@@ -35,6 +35,20 @@ services:
     depends_on:
       - mongodb
 
+  payment-service:
+    build: ./payment
+    container_name: payment-service
+    ports:
+      - "3003:3003"
+    env_file:
+      - ./payment/config/.env
+    volumes:
+      - ./payment:/app
+      - /app/node_modules
+    depends_on:
+      - mongodb
+
+
 
   mongo-express:
     image: mongo-express
