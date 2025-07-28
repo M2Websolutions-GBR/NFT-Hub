@@ -181,3 +181,20 @@ export const getCreatorProfile = async (req, res) => {
   }
 };
 
+// NFT als verkauft markieren (wird vom Payment-Service via PATCH aufgerufen)
+export const markAsSold = async (req, res) => {
+  try {
+    const nft = await NFT.findById(req.params.id);
+    if (!nft) return res.status(404).json({ message: 'NFT not found' });
+
+    nft.soldCount += 1;
+    if (nft.soldCount >= nft.editionLimit) {
+      nft.isSoldOut = true;
+    }
+
+    await nft.save();
+    res.status(200).json({ message: 'NFT updated after sale', soldCount: nft.soldCount });
+  } catch (err) {
+    res.status(500).json({ message: 'Error updating NFT', error: err.message });
+  }
+};
