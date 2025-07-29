@@ -22,21 +22,33 @@ export const webhookHandler = async (req, res) => {
   }
 
   if (event.type === 'checkout.session.completed') {
-    const session = event.data.object;
-    const { nftId, buyerId } = session.metadata;
+  const session = event.data.object;
+  const { nftId, buyerId, userId } = session.metadata || {};
 
-    try {
+  try {
+    if (session.mode === 'payment') {
       await Order.findOneAndUpdate(
         { stripeSessionId: session.id },
         { status: 'paid' },
         { new: true }
       );
+      console.log(`Zahlung abgeschlossen für Order zu NFT ${nftId}`);
 
-      await axios.patch(`http://nft-service:3002/api/nft/sold/${nftId}`);
-    } catch (error) {
-      console.error('Fehler beim Verarbeiten des Webhooks:', error.message);
+      // NFT als verkauft markieren
+      if (nftId) {
+        await axios.patch(`http://nft-service:3002/api/nft/sold/${nftId}`);
+        console.log(` SoldCount für NFT ${nftId} wurde erhöht`);
+      }
     }
+
+    if (session.mode === 'subscription') {
+      console.log(` Abo abgeschlossen für User ${userId}`);
+      await axios.patch(`http://server-auth:3001/api/auth/subscribe/${userId}`);
+    }
+  } catch (error) {
+    console.error(' Fehler beim Webhook:', error);
   }
+}
 
   res.status(200).json({ received: true });
 };

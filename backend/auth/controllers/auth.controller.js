@@ -96,3 +96,32 @@ export const getUserById = async (req, res) => {
     res.status(500).json({ message: 'Error fetching user' });
   }
 };
+
+export const subscribeUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const expirationDate = new Date();
+    expirationDate.setDate(expirationDate.getDate() + 30); // 30 Tage gültig
+
+    const user = await User.findByIdAndUpdate(
+      id,
+      {
+        isSubscribed: true,
+        subscriptionExpires: expirationDate,
+      },
+      { new: true }
+    );
+
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    res.status(200).json({
+      message: 'User subscribed successfully',
+      user,
+    });
+  } catch (err) {
+    console.error('Subscribe Error:', err);
+    res.status(500).json({ message: 'Failed to subscribe user' });
+  }
+};
+
