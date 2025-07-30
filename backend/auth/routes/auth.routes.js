@@ -1,5 +1,5 @@
 import express from 'express';
-import { register, login, getUserById, subscribeUser } from '../controllers/auth.controller.js';
+import { register, login, getUserById, subscribeUser, renewSubscription } from '../controllers/auth.controller.js';
 
 const router = express.Router();
 
@@ -7,6 +7,8 @@ router.post('/register', register);
 router.post('/login', login);
 router.get('/user/:id', getUserById); 
 router.patch('/subscribe/:id', subscribeUser);
+router.patch('/renew-subscription/:userId', renewSubscription);
+
 
 
 export default router;

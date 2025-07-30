@@ -125,3 +125,28 @@ export const subscribeUser = async (req, res) => {
   }
 };
 
+export const renewSubscription = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const now = new Date();
+    const currentExp = user.subscriptionExpires ? new Date(user.subscriptionExpires) : now;
+    const baseDate = currentExp > now ? currentExp : now;
+
+    // Verlängere um 30 Tage
+    baseDate.setDate(baseDate.getDate() + 30);
+    user.subscriptionExpires = baseDate;
+    user.isSubscribed = true;
+
+    await user.save();
+    res.status(200).json({ message: 'Subscription renewed', subscriptionExpires: user.subscriptionExpires });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to renew subscription' });
+  }
+};
+
+
