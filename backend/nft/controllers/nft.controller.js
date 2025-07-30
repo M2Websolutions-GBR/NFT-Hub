@@ -1,45 +1,63 @@
 import NFT from '../models/nft.js';
 import cloudinary from '../config/cloudinary.js';
 import axios from 'axios';
+import crypto from 'crypto';
+
 
 export const uploadNFT = async (req, res) => {
   try {
     const { title, description, price, editionLimit } = req.body;
     const file = req.file;
     const creatorId = req.user.id;
+    // Datei auslesen (z. B. bei Multer-Upload: req.file.path)
+   
 
     if (!title || !price || !file) {
       return res.status(400).json({ message: 'Missing required fields or image' });
     }
+    
+    // 🔐 SHA256-Hash aus dem Bildbuffer berechnen
+    const imageHash = crypto.createHash('sha256').update(req.file.buffer).digest('hex');
 
-    // Bild zu Cloudinary hochladen
-    const uploadResult = await cloudinary.uploader.upload_stream(
-      { resource_type: 'image' },
-      async (error, result) => {
-        if (error) {
-          console.error('Cloudinary upload error:', error);
-          return res.status(500).json({ message: 'Cloudinary upload failed' });
-        }
 
-        // Neues NFT erstellen
-        const newNFT = new NFT({
-          title,
-          description,
-          imageUrl: result.secure_url,
-          imagePublicId: result.public_id,
-          price,
-          editionLimit,
-          creatorId,
-        });
+    // 🔍 Prüfen, ob der Hash schon existiert
+    const duplicateNFT = await NFT.findOne({ imageHash });
+    if (duplicateNFT) {
+      return res.status(400).json({
+        message: 'Dieses Bild wurde bereits als NFT hochgeladen.'
+      });
+    }
 
-        await newNFT.save();
+    // ☁️ Bild zu Cloudinary hochladen
+    const streamUpload = () =>
+      new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { resource_type: 'image' },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+          }
+        );
+        stream.end(file.buffer);
+      });
 
-        res.status(201).json({ message: 'NFT created', nft: newNFT });
-      }
-    );
+    const result = await streamUpload();
 
-    // Upload starten
-    uploadResult.end(file.buffer);
+    // 🆕 Neues NFT erstellen und speichern
+    const newNFT = new NFT({
+      title,
+      description,
+      imageUrl: result.secure_url,
+      imagePublicId: result.public_id,
+      price,
+      editionLimit,
+      creatorId,
+      imageHash
+    });
+
+    await newNFT.save();
+
+    res.status(201).json({ message: 'NFT created', nft: newNFT });
 
   } catch (err) {
     console.error('Error creating NFT:', err.message);
