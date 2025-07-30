@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
+import axios from 'axios';
 
-// Basis-Auth: prüft, ob ein gültiges Token vorhanden ist
-export const verifyToken = (req, res, next) => {
+export const verifyToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -11,11 +11,23 @@ export const verifyToken = (req, res, next) => {
   const token = authHeader.split(' ')[1];
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // enthält id, email, role
+    // Optional: Lokale Token-Validierung (nicht zwingend)
+    jwt.verify(token, process.env.JWT_SECRET);
+
+    // 🛰 Echten User vom Auth-Service holen
+    const response = await axios.get('http://server-auth:3001/api/auth/me', {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    const user = response.data; // Hier holst du den echten User aus der Antwort
+
+    req.user = user; // Jetzt mit isSubscribed, role, etc.
     next();
   } catch (err) {
-    return res.status(403).json({ message: 'Invalid or expired token.' });
+    console.error('Auth Error:', err.message);
+    return res.status(403).json({ message: 'Unauthorized' });
   }
 };
 

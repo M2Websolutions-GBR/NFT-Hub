@@ -10,12 +10,23 @@ export const uploadNFT = async (req, res) => {
     const file = req.file;
     const creatorId = req.user.id;
     // Datei auslesen (z. B. bei Multer-Upload: req.file.path)
-   
+
+    const user = req.user;
+
+    console.log('Rolle:', user.role);
+    console.log('isSubscribed:', user.isSubscribed);
+
+
+    if (!user.isSubscribed) {
+      return res.status(403).json({
+        message: 'Du brauchst ein aktives Creator-Abo, um NFTs hochzuladen.'
+      });
+    }
 
     if (!title || !price || !file) {
       return res.status(400).json({ message: 'Missing required fields or image' });
     }
-    
+
     // 🔐 SHA256-Hash aus dem Bildbuffer berechnen
     const imageHash = crypto.createHash('sha256').update(req.file.buffer).digest('hex');
 
