@@ -1,7 +1,7 @@
 # 💳 Payment Service (Stripe) – NFT Hub
 
 This is the standalone microservice handling payments in the NFT Hub project.
-It processes Stripe payments, stores orders, and notifies the NFT service after successful purchases.
+It processes Stripe payments, handles subscriptions, stores orders, and notifies the NFT/auth services after successful purchases.
 
 ---
 
@@ -9,9 +9,10 @@ It processes Stripe payments, stores orders, and notifies the NFT service after 
 
 - Node.js + Express
 - MongoDB (via Docker)
-- Stripe (Checkout + Webhooks)
+- Stripe (Checkout + Subscriptions + Webhooks)
 - Axios (Inter-service communication)
 - Ngrok (local webhook forwarding)
+- Docker & Compose
 
 ---
 
@@ -20,14 +21,16 @@ It processes Stripe payments, stores orders, and notifies the NFT service after 
 ```plaintext
 /payment-service
 ├── controllers/
-│   ├── payment.controller.js      # Create Stripe checkout sessions
-│   ├── webhook.controller.js      # Handle Stripe webhooks
+│   ├── payment.controller.js        # Create Stripe checkout or subscription sessions
+│   ├── webhook.controller.js        # Handle Stripe webhooks (orders & subscriptions)
 ├── models/
-│   └── order.model.js             # MongoDB order model
+│   └── order.model.js               # MongoDB order model
 ├── routes/
-│   ├── payment.routes.js          # POST /create-checkout-session
-│   ├── webhook.routes.js          # POST /webhook/stripe
-├── server.js                      # Express server entry
+│   ├── payment.routes.js            # Routes: /create-checkout-session, /create-subscription-session
+│   ├── webhook.routes.js            # Route: /webhook/stripe
+├── config/
+│   └── db.js                        # MongoDB connection helper
+├── server.js                        # Express server entry
 ├── Dockerfile
 ├── .env
 ```
@@ -62,7 +65,7 @@ services:
       - mongodb
 ```
 
-Start everything with:
+Start everything:
 
 ```bash
 docker-compose up --build
@@ -72,10 +75,9 @@ docker-compose up --build
 
 ## 🧪 Test a Payment Locally
 
-1. Create an NFT → Save `nftId`, `price`, `creatorId`
-2. Create an order via POST request:
+### 1. NFT Purchase (One-time)
 
-Example (`http://localhost:3003/api/payment/create-checkout-session`):
+POST to `http://localhost:3003/api/payment/create-checkout-session`
 
 ```json
 {
@@ -86,16 +88,30 @@ Example (`http://localhost:3003/api/payment/create-checkout-session`):
 }
 ```
 
-You will receive a Stripe Checkout URL. Open it and complete the payment.
+Returns a Stripe Checkout URL → Complete payment in browser.
 
 ---
 
-## 🌐 Webhooks with Ngrok + Stripe Dashboard
+### 2. Creator Subscription
 
-### 1. Install & Authenticate Ngrok (only once)
+POST to `http://localhost:3003/api/payment/create-subscription-session`
+
+```json
+{
+  "userId": "abc123456789"
+}
+```
+
+Returns a Stripe URL → Choose payment method and subscribe.
+
+---
+
+## 🌐 Webhooks with Ngrok + Stripe
+
+### 1. Install & Authenticate Ngrok
 
 ```bash
-ngrok config add-authtoken <your-ngrok-token>
+ngrok config add-authtoken <your-token>
 ```
 
 ### 2. Start Ngrok Tunnel
@@ -104,48 +120,75 @@ ngrok config add-authtoken <your-ngrok-token>
 ngrok http 3003
 ```
 
-Note the HTTPS URL like `https://abc123.ngrok.io`
-
-### 3. Set up Webhook in Stripe Dashboard
-
-- Go to [Stripe Dashboard → Developers → Webhooks](https://dashboard.stripe.com/test/webhooks)
-- Add a new webhook endpoint:  
-  `https://abc123.ngrok.io/api/webhook/stripe`
-- Events to listen to:  
-  `checkout.session.completed`
-
-Now Stripe will forward test events to your local server.
+Note your HTTPS tunnel (e.g. `https://abc123.ngrok.io`)
 
 ---
 
-## 🔁 How it Works (Backend Flow)
+### 3. Add Webhook in Stripe
 
-1. Stripe sends `checkout.session.completed`
-2. Webhook marks the order as `paid`
-3. NFT service is notified via `PATCH /api/nft/sold/:id`
-4. `soldCount` increases in the NFT model
+Go to [Stripe Dashboard → Developers → Webhooks](https://dashboard.stripe.com/test/webhooks)
+
+Set endpoint:
+
+```bash
+https://abc123.ngrok.io/api/payment/webhook/stripe
+```
+
+**Listen to these events:**
+
+- `checkout.session.completed`
+
+---
+
+## 🔁 Webhook Flow
+
+### For NFT Purchases:
+
+1. Stripe → `/api/payment/webhook/stripe`
+2. Marks order as `paid`
+3. Sends PATCH to `nft-service/api/nft/sold/:nftId`
+4. NFT `soldCount` increases and may be marked as `soldOut`
+
+---
+
+### For Subscriptions:
+
+1. Stripe triggers webhook
+2. User's `isSubscribed` is set to `true`
+3. `subscriptionExpires` set to 30 days from now
+4. PATCH to `auth-service/api/auth/renew-subscription/:userId`
 
 ---
 
 ## ✅ What’s Done?
 
-- Stripe Checkout Integration
-- Order Model & Save Logic
-- Webhook Listening with Stripe CLI
-- Axios PATCH to NFT Service after purchase
-- Docker & Compose Integration
+- [x] Stripe Checkout for NFT purchases
+- [x] Creator Subscription with Stripe Subscriptions
+- [x] Webhook logic for payment + subscription
+- [x] Order saving in MongoDB
+- [x] Update NFT sold count via NFT service
+- [x] Update user subscription state via Auth service
+- [x] Dockerized payment service
+- [x] Stripe Webhooks via Ngrok
 
 ---
 
-## 📌 What’s Next?
+## 🔄 Services Involved
 
-- Add Creator Subscription System (Stripe Subscriptions)
-- Frontend checkout integration
-- NFT listing only for active subscribers
+| Service       | Role                              | Docker Name       |
+|---------------|-----------------------------------|-------------------|
+| Payment       | Handles Stripe payments           | `payment-service` |
+| NFT Service   | Marks sold NFTs, manages content  | `nft-service`     |
+| Auth Service  | Tracks users & subscriptions      | `server-auth`     |
 
 ---
 
 ## ℹ️ Notes
 
-- NFT service Docker name: `nft-service`
 - Local payment service port: `3003`
+- Ngrok must be running for local webhook tests
+- Stripe products must be pre-configured in your dashboard for subscriptions
+
+---
+
+Happy Building 🛠️
