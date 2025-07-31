@@ -1,47 +1,22 @@
-import puppeteer from 'puppeteer-core';
+import puppeteer from 'puppeteer';
 import fs from 'fs';
 import path from 'path';
+import { generateCertificateHTML } from './certificate.template.js';
 
-// Beispiel für Linux/Ubuntu (ggf. anpassen für Windows/Mac)
-const CHROME_PATH = '/usr/bin/google-chrome'; // oder chromium-browser
+export const createCertificatePDF = async ({ username, title, nftId }) => {
+  const date = new Date().toLocaleDateString();
+  const htmlContent = generateCertificateHTML({ username, title, date });
+  const outputPath = path.resolve('certificates', `${nftId}.pdf`);
 
-export const generateCertificatePDF = async ({ buyerName, buyerEmail, nftTitle, creatorName, price, date }) => {
-  const fileName = `${nftTitle}_${buyerName}`.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf';
-  const filePath = path.resolve('certificates', fileName);
-
-  const browser = await puppeteer.launch({
-    headless: 'new',
-    executablePath: CHROME_PATH,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
-
+ const browser = await puppeteer.launch({
+  executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser',
+  headless: true,
+  args: ['--no-sandbox', '--disable-setuid-sandbox'],
+});
   const page = await browser.newPage();
-
-  const htmlContent = `
-    <html>
-      <head>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 40px; }
-          h1 { color: #333; }
-          p { font-size: 18px; }
-        </style>
-      </head>
-      <body>
-        <h1>🎉 NFT-Zertifikat</h1>
-        <p><strong>Käufer:</strong> ${buyerName}</p>
-        <p><strong>Email:</strong> ${buyerEmail}</p>
-        <p><strong>Titel:</strong> ${nftTitle}</p>
-        <p><strong>Ersteller:</strong> ${creatorName}</p>
-        <p><strong>Preis:</strong> ${price} ETH</p>
-        <p><strong>Kaufdatum:</strong> ${date}</p>
-      </body>
-    </html>
-  `;
-
-  await page.setContent(htmlContent);
-  await page.pdf({ path: filePath, format: 'A4' });
-
+  await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+  await page.pdf({ path: outputPath, format: 'A4' });
   await browser.close();
 
-  return { fileName, filePath };
+  return outputPath; // für E-Mail-Versand
 };
