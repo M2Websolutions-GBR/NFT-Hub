@@ -17,7 +17,10 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
+    "fs": "^0.0.1-security",
     "mongoose": "^8.16.5",
+    "nodemailer": "^7.0.5",
+    "puppeteer-core": "^24.15.0",
     "stripe": "^18.3.0"
   },
   "devDependencies": {

@@ -2,9 +2,33 @@ import Stripe from 'stripe';
 import axios from 'axios';
 import Order from '../models/order.model.js';
 import dotenv from 'dotenv';
+import { generateCertificatePDF } from '../utils/generateCertificatePDF.js';
+import { sendCertificateEmail } from '../utils/sendCertificateEmail.js';
 dotenv.config();
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const buyerEmail = user.email; // je nachdem, wie du's übergibst
+const buyerName = user.username || user.name;
+const nftTitle = nft.title;
+const creatorName = nft.creatorName;
+const price = nft.price;
+const date = new Date().toLocaleDateString('de-DE');
+
+const { filePath, fileName } = await generateCertificatePDF({
+  buyerName,
+  buyerEmail,
+  nftTitle,
+  creatorName,
+  price,
+  date
+});
+
+await sendCertificateEmail({
+  buyerEmail,
+  buyerName,
+  filePath,
+  fileName
+});
 
 export const webhookHandler = async (req, res) => {
   const sig = req.headers['stripe-signature'];
