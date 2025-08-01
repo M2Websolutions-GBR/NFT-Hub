@@ -6,6 +6,9 @@ import paymentRoutes from './routes/payment.routes.js';
 // import orderRoutes from './routes/order.routes.js'; // deine API-Routen
 import { webhookHandler } from './controllers/webhook.controller.js'; // gleich unten
 import Stripe from 'stripe';
+import ownershipRoutes from './routes/ownership.routes.js';
+
+
 
 
 dotenv.config();
@@ -23,7 +26,7 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), webho
 app.use(cors());
 app.use(express.json()); // wichtig für req.body
 app.use('/api/payment', paymentRoutes); // hier wird der Pfad richtig registriert
-
+app.use('/api', ownershipRoutes);
 
 app.listen(PORT, () => {
   console.log(`Payment Service listening on port ${PORT}`);

@@ -76,6 +76,41 @@ export const uploadNFT = async (req, res) => {
   }
 };
 
+export const downloadNFT = async (req, res) => {
+  const userId = req.user.id;
+  const nftId = req.params.nftId;
+
+  console.log('🔐 User from token:', req.user);
+  console.log('➡️ Calling ownership check with:', nftId, userId);
+
+
+  try {
+    // 1. Ownership check beim Payment-Service
+    const ownershipCheck = await axios.get(`http://payment-service:3003/api/ownership/${nftId}/${userId}`);
+    if (ownershipCheck.data.isOwner !== true) {
+      return res.status(403).json({ message: 'You are not authorized to download this NFT.' });
+    }
+
+    // 2. NFT abrufen
+    const nft = await NFT.findById(nftId);
+    if (!nft || !nft.imageUrl) {
+      return res.status(404).json({ message: 'NFT or file URL not found.' });
+    }
+
+    // 3. Datei von Cloudinary weiterleiten
+    const fileResponse = await axios.get(nft.imageUrl, {
+      responseType: 'stream'
+    });
+
+    res.setHeader('Content-Disposition', `attachment; filename="${nft.title || 'nft'}.jpg"`);
+    fileResponse.data.pipe(res);
+
+  } catch (err) {
+    console.error('NFT download failed:', err.message);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 export const updateNFT = async (req, res) => {
   try {
     const { id } = req.params;

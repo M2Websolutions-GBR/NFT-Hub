@@ -1,5 +1,5 @@
 import express from 'express';
-import { uploadNFT, getAllNFTs, getMyNFTs, getCreatorProfile, getNFTById, updateNFT, deleteNFT, markAsSold} from '../controllers/nft.controller.js';
+import { uploadNFT, getAllNFTs, getMyNFTs, getCreatorProfile, getNFTById, updateNFT, deleteNFT, markAsSold, downloadNFT } from '../controllers/nft.controller.js';
 import { verifyToken, isCreator } from '../middleware/auth.middleware.js';
 import upload from '../middleware/upload.middleware.js';
 
@@ -14,7 +14,7 @@ router.get('/:id', getNFTById); // muss ganz unten stehen!
 router.put('/:id', verifyToken, isCreator, updateNFT);
 router.delete('/:id', verifyToken, isCreator, deleteNFT);
 router.patch('/sold/:id', markAsSold);
-
+router.get('/nft/download/:nftId', verifyToken, downloadNFT);
 
 
 export default router;
