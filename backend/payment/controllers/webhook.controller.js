@@ -46,7 +46,7 @@ export const webhookHandler = async (req, res) => {
 
         // Zusatz: Käufer-Info abrufen
         const userResponse = await axios.get(`http://server-auth:3001/api/auth/user/${buyerId}`);
-        const username = userResponse.data.username;
+        const {username, email } = userResponse.data;
 
         // Zertifikat generieren
         const pdfPath = await createCertificatePDF({
@@ -55,15 +55,17 @@ export const webhookHandler = async (req, res) => {
           nftId
         });
         console.log(` Zertifikat erstellt unter: ${pdfPath}`);
-      }
 
-      await sendCertificateEmail({
+        await sendCertificateEmail({
         to: email,
         username,
         title: session.metadata.title || 'Unnamed NFT',
         filePath: pdfPath
       });
       console.log(`Zertifikat an ${email} versendet`);
+      }
+
+      
 
       if (session.mode === 'subscription') {
         console.log(`Abo abgeschlossen für User ${userId}`);
