@@ -3,7 +3,8 @@ import axios from 'axios';
 import Order from '../models/order.model.js';
 import dotenv from 'dotenv';
 import { createCertificatePDF } from '../utils/generateCertificatePDF.js';
-// import { sendCertificateEmail } from '../utils/sendCertificateEmail.js';
+import { sendCertificateEmail } from '../utils/email.js';
+
 
 
 dotenv.config();
@@ -55,6 +56,14 @@ export const webhookHandler = async (req, res) => {
         });
         console.log(` Zertifikat erstellt unter: ${pdfPath}`);
       }
+
+      await sendCertificateEmail({
+        to: email,
+        username,
+        title: session.metadata.title || 'Unnamed NFT',
+        filePath: pdfPath
+      });
+      console.log(`Zertifikat an ${email} versendet`);
 
       if (session.mode === 'subscription') {
         console.log(`Abo abgeschlossen für User ${userId}`);
