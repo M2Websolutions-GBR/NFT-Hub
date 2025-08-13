@@ -5,17 +5,14 @@ export const getAdminSummary = async (req, res) => {
   try {
     const auth = { headers: { Authorization: req.headers.authorization } };
 
-    // Diese Endpunkte ggf. in den jeweiligen Services bereitstellen:
-    // - Auth: /api/auth/users (oder /count)
-    // - NFT:  /api/nft        (oder /count)
-    // - Pay:  /api/orders     (oder /count)
-    const [usersRes, nftsRes, ordersRes] = await Promise.all([
-      axios.get(`${AUTH_URL}/api/auth/users`, auth).catch(() => ({ data: [] })),
+    // Bestehende Endpunkte abrufen; falls sie fehlen, leere Arrays zurückgeben
+    const [userRes, nftsRes, ordersRes] = await Promise.all([
+      axios.get(`${AUTH_URL}/api/auth/me`, auth).catch(() => ({ data: null })),
       axios.get(`${NFT_URL}/api/nft`, auth).catch(() => ({ data: [] })),
       axios.get(`${PAYMENT_URL}/api/orders`, auth).catch(() => ({ data: [] }))
     ]);
 
-    const users = Array.isArray(usersRes.data) ? usersRes.data : (usersRes.data?.items || []);
+    const users = userRes.data ? [userRes.data] : [];
     const nfts = Array.isArray(nftsRes.data) ? nftsRes.data : (nftsRes.data?.items || []);
     const orders = Array.isArray(ordersRes.data) ? ordersRes.data : (ordersRes.data?.items || []);
 

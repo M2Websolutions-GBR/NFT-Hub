@@ -4,26 +4,30 @@ import { AUTH_URL, NFT_URL, PAYMENT_URL } from '../config/serviceURLs.js';
 const safeGet = async (url, opts = {}, label) => {
   try {
     const res = await axios.get(url, opts);
-    return res.data;
+    return { data: res.data, status: res.status };
   } catch (err) {
     const status = err.response?.status || 'NO_RESPONSE';
     console.error(`[BFF] ${label} failed:`, status, err.response?.data || err.message);
-    return null; // Fallback
+    return { data: null, status };
   }
 };
 
 export const getMe = async (req, res) => {
-  const userId = req.user.id;
+
   const authHeader = { headers: { Authorization: req.headers.authorization } };
 
   try {
-    const user = await safeGet(`${AUTH_URL}/api/auth/user/${userId}`, {}, 'auth-service:user');
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    const { data: user, status: userStatus } = await safeGet(`${AUTH_URL}/api/auth/me`, authHeader, 'auth-service:me');
+    if (!user) {
+      const code = userStatus === 'NO_RESPONSE' ? 503 : 404;
+      return res.status(code).json({ message: code === 503 ? 'auth service unavailable' : 'User not found' });
+    }
+    const { data: uploads } = await safeGet(`${NFT_URL}/api/nft/mine`, authHeader, 'nft-service:mine');
+    const { data: orders } = await safeGet(`${PAYMENT_URL}/api/orders/mine`, authHeader, 'payment-service:mine');
 
-    const uploads = await safeGet(`${NFT_URL}/api/nft/mine`, authHeader, 'nft-service:mine') || [];
-    const orders = await safeGet(`${PAYMENT_URL}/api/orders/mine`, authHeader, 'payment-service:mine') || [];
-
-    const paidOrders = orders.filter(o => o.status === 'paid');
+    const uploadsList = uploads || [];
+    const ordersList = orders || [];
+    const paidOrders = ordersList.filter(o => o.status === 'paid');
     const isCreator = user.role === 'creator' && (user.isSubscribed ?? true);
     const isBuyer = paidOrders.length > 0;
 
@@ -31,12 +35,12 @@ export const getMe = async (req, res) => {
       user,
       flags: { isCreator, isBuyer },
       stats: {
-        uploadsCount: uploads.length,
-        ordersCount: orders.length,
+        uploadsCount: uploadsList.length,
+        ordersCount: ordersList.length,
         paidOrdersCount: paidOrders.length
       },
-      uploads,
-      orders
+      uploads: uploadsList,
+      orders: ordersList
     });
   } catch (err) {
     console.error('BFF /api/me unexpected error:', err.message);
