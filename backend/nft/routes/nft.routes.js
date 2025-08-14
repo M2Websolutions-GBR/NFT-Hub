@@ -6,7 +6,7 @@ import upload from '../middleware/upload.middleware.js';
 const router = express.Router();
 
 // Upload nur für eingeloggte Creator
-router.post('/', verifyToken, isCreator, upload.single('image'), uploadNFT);
+router.post('/upload', verifyToken, isCreator, upload.single('image'), uploadNFT);
 router.get('/', getAllNFTs); // Öffentliche Route
 router.get('/mine', verifyToken, isCreator, getMyNFTs); // geschützt für Creator
 router.get('/creator/:creatorId', getCreatorProfile);
