@@ -2,15 +2,15 @@ import jwt from 'jsonwebtoken';
 import axios from 'axios';
 
 export const verifyToken = async (req, res, next) => {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ message: 'Access denied. No token provided.' });
-  }
-
-  const token = authHeader.split(' ')[1];
-
+ const raw = req.headers.authorization;
+  if (!raw?.startsWith('Bearer ')) return res.status(401).json({ message: 'No token' });
   try {
+    const token = raw.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = { ...decoded, id: decoded.id || decoded._id }; // WICHTIG
+    next();
+
+
     // Optional: Lokale Token-Validierung (nicht zwingend)
     jwt.verify(token, process.env.JWT_SECRET);
 
