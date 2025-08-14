@@ -21,9 +21,7 @@ export const verifyToken = async (req, res, next) => {
       }
     });
 
-    const user = response.data;
-    user.id = user._id; // 🔧 Kurz: „alias“ setzen
-
+    const user = response.data; // Hier holst du den echten User aus der Antwort
 
     req.user = user; // Jetzt mit isSubscribed, role, etc.
     next();

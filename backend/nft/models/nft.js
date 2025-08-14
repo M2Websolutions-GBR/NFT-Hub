@@ -43,6 +43,11 @@ const NFTSchema = new mongoose.Schema(
     editionCount: {
       type: Number,
       default: 0,
+    },
+    imageHash: {
+      type: String,
+      required: true,
+      unique: true // wichtig!
     }
   },
   { timestamps: true }

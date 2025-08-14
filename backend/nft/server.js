@@ -13,7 +13,7 @@ app.use(cors());
 app.use(express.json());
 DBconnection();
 
-app.use('/api/nft', nftRoutes);
+app.use('/api', nftRoutes);
 
 
 
