@@ -35,6 +35,34 @@ services:
     depends_on:
       - mongodb
 
+  payment-service:
+    build: ./payment
+    container_name: payment-service
+    ports:
+      - "3003:3003"
+    env_file:
+      - ./payment/config/.env
+    volumes:
+      - ./payment:/app
+      - /app/node_modules
+    depends_on:
+      - mongodb
+
+  
+  bff-service:
+    build: ./bff
+    container_name: bff-service
+    ports:
+      - "3010:3010"
+    env_file:
+      - ./bff/config/.env
+    depends_on:
+      - server-auth
+      - nft-service
+      - payment-service
+
+
+
 
   mongo-express:
     image: mongo-express

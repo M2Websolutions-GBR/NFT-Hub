@@ -1,49 +1,113 @@
 import NFT from '../models/nft.js';
 import cloudinary from '../config/cloudinary.js';
 import axios from 'axios';
+import crypto from 'crypto';
+
 
 export const uploadNFT = async (req, res) => {
   try {
     const { title, description, price, editionLimit } = req.body;
     const file = req.file;
     const creatorId = req.user.id;
+    // Datei auslesen (z. B. bei Multer-Upload: req.file.path)
+
+    const user = req.user;
+
+    console.log('Rolle:', user.role);
+    console.log('isSubscribed:', user.isSubscribed);
+
+
+    if (!user.isSubscribed) {
+      return res.status(403).json({
+        message: 'Du brauchst ein aktives Creator-Abo, um NFTs hochzuladen.'
+      });
+    }
 
     if (!title || !price || !file) {
       return res.status(400).json({ message: 'Missing required fields or image' });
     }
 
-    // Bild zu Cloudinary hochladen
-    const uploadResult = await cloudinary.uploader.upload_stream(
-      { resource_type: 'image' },
-      async (error, result) => {
-        if (error) {
-          console.error('Cloudinary upload error:', error);
-          return res.status(500).json({ message: 'Cloudinary upload failed' });
-        }
+    // 🔐 SHA256-Hash aus dem Bildbuffer berechnen
+    const imageHash = crypto.createHash('sha256').update(req.file.buffer).digest('hex');
 
-        // Neues NFT erstellen
-        const newNFT = new NFT({
-          title,
-          description,
-          imageUrl: result.secure_url,
-          imagePublicId: result.public_id,
-          price,
-          editionLimit,
-          creatorId,
-        });
 
-        await newNFT.save();
+    // 🔍 Prüfen, ob der Hash schon existiert
+    const duplicateNFT = await NFT.findOne({ imageHash });
+    if (duplicateNFT) {
+      return res.status(400).json({
+        message: 'Dieses Bild wurde bereits als NFT hochgeladen.'
+      });
+    }
 
-        res.status(201).json({ message: 'NFT created', nft: newNFT });
-      }
-    );
+    // ☁️ Bild zu Cloudinary hochladen
+    const streamUpload = () =>
+      new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { resource_type: 'image' },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+          }
+        );
+        stream.end(file.buffer);
+      });
 
-    // Upload starten
-    uploadResult.end(file.buffer);
+    const result = await streamUpload();
+
+    // 🆕 Neues NFT erstellen und speichern
+    const newNFT = new NFT({
+      title,
+      description,
+      imageUrl: result.secure_url,
+      imagePublicId: result.public_id,
+      price,
+      editionLimit,
+      creatorId,
+      imageHash
+    });
+
+    await newNFT.save();
+
+    res.status(201).json({ message: 'NFT created', nft: newNFT });
 
   } catch (err) {
     console.error('Error creating NFT:', err.message);
     res.status(500).json({ message: 'Error uploading NFT' });
+  }
+};
+
+export const downloadNFT = async (req, res) => {
+  const userId = req.user.id;
+  const nftId = req.params.nftId;
+
+  console.log('🔐 User from token:', req.user);
+  console.log('➡️ Calling ownership check with:', nftId, userId);
+
+
+  try {
+    // 1. Ownership check beim Payment-Service
+    const ownershipCheck = await axios.get(`http://payment-service:3003/api/ownership/${nftId}/${userId}`);
+    if (ownershipCheck.data.isOwner !== true) {
+      return res.status(403).json({ message: 'You are not authorized to download this NFT.' });
+    }
+
+    // 2. NFT abrufen
+    const nft = await NFT.findById(nftId);
+    if (!nft || !nft.imageUrl) {
+      return res.status(404).json({ message: 'NFT or file URL not found.' });
+    }
+
+    // 3. Datei von Cloudinary weiterleiten
+    const fileResponse = await axios.get(nft.imageUrl, {
+      responseType: 'stream'
+    });
+
+    res.setHeader('Content-Disposition', `attachment; filename="${nft.title || 'nft'}.jpg"`);
+    fileResponse.data.pipe(res);
+
+  } catch (err) {
+    console.error('NFT download failed:', err.message);
+    res.status(500).json({ message: 'Internal server error' });
   }
 };
 
@@ -181,3 +245,20 @@ export const getCreatorProfile = async (req, res) => {
   }
 };
 
+// NFT als verkauft markieren (wird vom Payment-Service via PATCH aufgerufen)
+export const markAsSold = async (req, res) => {
+  try {
+    const nft = await NFT.findById(req.params.id);
+    if (!nft) return res.status(404).json({ message: 'NFT not found' });
+
+    nft.soldCount += 1;
+    if (nft.soldCount >= nft.editionLimit) {
+      nft.isSoldOut = true;
+    }
+
+    await nft.save();
+    res.status(200).json({ message: 'NFT updated after sale', soldCount: nft.soldCount });
+  } catch (err) {
+    res.status(500).json({ message: 'Error updating NFT', error: err.message });
+  }
+};

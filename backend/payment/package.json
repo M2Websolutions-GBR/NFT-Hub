@@ -1,11 +1,12 @@
 {
-  "name": "nft",
+  "name": "payment",
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "stripe-webhook": "stripe listen --forward-to http://host.docker.internal:3003/api/payment/webhook"
   },
   "keywords": [],
   "author": "",
@@ -13,14 +14,15 @@
   "description": "",
   "dependencies": {
     "axios": "^1.11.0",
-    "cloudinary": "^2.7.0",
     "cors": "^2.8.5",
-    "crypto": "^1.0.1",
-    "dotenv": "^17.2.0",
+    "dotenv": "^17.2.1",
     "express": "^5.1.0",
+    "fs": "^0.0.1-security",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.16.4",
-    "multer": "^2.0.2"
+    "mongoose": "^8.16.5",
+    "nodemailer": "^7.0.5",
+    "puppeteer": "^24.15.0",
+    "stripe": "^18.3.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
