@@ -5,6 +5,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import ProfileEdit from "./pages/ProfilEdit";
 
 export const routes: RouteObject[] = [
   {
@@ -19,6 +20,14 @@ export const routes: RouteObject[] = [
         element: (
           <ProtectedRoute>
             <Dashboard />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "profile",
+        element: (
+          <ProtectedRoute>
+            <ProfileEdit />
           </ProtectedRoute>
         ),
       },

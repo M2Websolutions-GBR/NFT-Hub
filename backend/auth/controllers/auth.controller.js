@@ -37,12 +37,13 @@ export const register = async (req, res) => {
 export const updateMe = async (req, res) => {
   try {
     const userId = req.user.id; // kommt aus verifyToken
-    const { username, profileInfo } = req.body;
+    const { username, profileInfo, avatarUrl } = req.body;
 
     // Nur erlaubte Felder updaten
     const update = {};
     if (typeof username === "string") update.username = username.trim();
     if (typeof profileInfo === "string") update.profileInfo = profileInfo.trim();
+    if (typeof avatarUrl === "string") update.avatarUrl = avatarUrl.trim();
 
     const user = await User.findByIdAndUpdate(
       userId,

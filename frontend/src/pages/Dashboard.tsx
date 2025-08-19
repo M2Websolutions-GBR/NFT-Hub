@@ -10,6 +10,8 @@ export default function Dashboard() {
         <div className="text-lg font-medium">{user?.username}</div>
         <div className="text-sm text-gray-600">Rolle: {user?.role ?? "—"}</div>
         <div className="text-sm text-gray-600">Abo aktiv: {user?.isSubscribed ? "Ja" : "Nein"}</div>
+        <div className="text-sm text-gray-600">Profilinfo: {user?.profileInfo?.trim() ? user.profileInfo : "—"}</div>
+
       </div>
     </div>
   );
