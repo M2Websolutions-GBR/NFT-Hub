@@ -1,6 +1,7 @@
 import type { RouteObject } from "react-router-dom";
 import AppShell from "./shell/AppShell";
 import Landing from "./pages/Landing";
+import Market from "./pages/Market";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
@@ -13,6 +14,7 @@ export const routes: RouteObject[] = [
     element: <AppShell />,
     children: [
       { index: true, element: <Landing /> },
+      { path: "market", element: <Market /> },
       { path: "login", element: <Login /> },
       { path: "register", element: <Register /> },
       {

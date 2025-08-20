@@ -32,6 +32,7 @@ export default function Landing() {
                     </Link>
                 </div>
             </div>
+            
 
             <div className="rounded-lg border bg-white/50 p-6">
                 <div className="grid gap-3">

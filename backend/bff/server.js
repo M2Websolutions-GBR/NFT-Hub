@@ -4,6 +4,7 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import routes from './routes/index.js';
 import meRoutes from "./routes/me.routes.js";
+import nftRoutes from "./routes/nft.routes.js";
 
 dotenv.config();
 
@@ -12,6 +13,7 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 app.use(meRoutes);
+app.use(nftRoutes);
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 

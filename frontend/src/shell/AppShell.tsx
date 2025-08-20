@@ -9,7 +9,7 @@ export default function AppShell() {
         <div className="min-h-dvh flex flex-col">
             <header className="border-b bg-white/60 backdrop-blur supports-[backdrop-filter]:bg-white/50 sticky top-0 z-10">
                 <div className="mx-auto max-w-6xl px-4 h-14 flex items-center justify-between">
-                    <Link to="/" className="font-semibold tracking-tight">
+                    <Link to={user ? "/market" : "/"} className="font-semibold tracking-tight">
                         {import.meta.env.VITE_APP_NAME || "NFT Hub"}
                     </Link>
                     <nav className="flex items-center gap-3 text-sm">
