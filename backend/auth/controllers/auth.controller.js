@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 
 export const register = async (req, res) => {
   try {
-    const { username, email, password, role } = req.body;
+    const { username, email, password, role, profileInfo } = req.body;
 
     // Check auf vorhandene E-Mail oder Username
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
@@ -21,7 +21,8 @@ export const register = async (req, res) => {
       username,
       email,
       password: hashedPassword,
-      role: role || 'buyer' // falls z. B. creator ausgewählt wird
+      role: role || 'buyer', // falls z. B. creator ausgewählt wird
+      profileInfo: profileInfo || "Über mich",
     });
 
     await newUser.save();
@@ -30,6 +31,31 @@ export const register = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error during registration' });
+  }
+};
+
+export const updateMe = async (req, res) => {
+  try {
+    const userId = req.user.id; // kommt aus verifyToken
+    const { username, profileInfo, avatarUrl } = req.body;
+
+    // Nur erlaubte Felder updaten
+    const update = {};
+    if (typeof username === "string") update.username = username.trim();
+    if (typeof profileInfo === "string") update.profileInfo = profileInfo.trim();
+    if (typeof avatarUrl === "string") update.avatarUrl = avatarUrl.trim();
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: update },
+      { new: true, runValidators: true, select: "-password" }
+    );
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+    return res.status(200).json(user);
+  } catch (err) {
+    console.error("updateMe error:", err);
+    return res.status(500).json({ message: "Server error" });
   }
 };
 

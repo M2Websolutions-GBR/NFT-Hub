@@ -35,8 +35,17 @@ const UserSchema = new mongoose.Schema(
     subscriptionExpires: {
       type: Date,
       default: null,
-    }
-  },
+    },
+    profileInfo: {
+      type: String,
+      default: ""
+    },
+    avatarUrl: { 
+      type: String, 
+      default: "" 
+    }, 
+    
+},
   { timestamps: true }
 );
 
