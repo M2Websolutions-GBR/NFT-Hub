@@ -1,31 +1,46 @@
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { useAuth } from "../store/auth";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 
-export default function ProtectedRoute({ children }: { children: ReactNode }) {
+type Role = "admin" | "creator" | "buyer" | (string & {});
+type Props = {
+  children: ReactNode;
+  requireRole?: Role | Role[];
+};
+
+function hasRequiredRole(userRole?: string, required?: Role | Role[]) {
+  if (!required) return true;
+  const list = Array.isArray(required) ? required : [required];
+  return !!userRole && list.includes(userRole as Role);
+}
+
+export default function ProtectedRoute({ children, requireRole }: Props) {
   const { user, token, fetchMe } = useAuth();
-  const nav = useNavigate();
   const loc = useLocation();
 
+  // Falls eingeloggt aber user noch nicht geladen → nachladen
   useEffect(() => {
-    (async () => {
-      if (!token) {
-        nav("/login", { replace: true, state: { from: loc.pathname } });
-        return;
-      }
-      if (!user) {
-        await fetchMe().catch(() => {
-          nav("/login", { replace: true, state: { from: loc.pathname } });
-        });
-      }
-    })();
-  }, [token]);
+    if (token && !user) {
+      // Fehlerhandled im Store; bei invalidem Token wird state gecleart
+      fetchMe().catch(() => {/* no-op: Redirect unten übernimmt */});
+    }
+  }, [token, user, fetchMe]);
 
-  if (!token || !user) {
-    return (
-      <div className="text-center text-gray-600">Lade…</div>
-    );
+  // Nicht eingeloggt → Login
+  if (!token) {
+    return <Navigate to="/login" replace state={{ from: loc.pathname }} />;
   }
+
+  // Token vorhanden, User noch am Laden
+  if (!user) {
+    return <div className="text-center text-gray-600">Lade…</div>;
+  }
+
+  // Rolle prüfen (falls gefordert)
+  if (!hasRequiredRole(user.role, requireRole)) {
+    return <Navigate to="/" replace />;
+  }
+
   return <>{children}</>;
 }

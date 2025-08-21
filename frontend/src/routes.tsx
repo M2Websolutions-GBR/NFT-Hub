@@ -7,6 +7,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import ProfileEdit from "./pages/ProfilEdit";
+import CreatorDashboard from "./pages/CreatrorDashboard";
 
 export const routes: RouteObject[] = [
   {
@@ -17,6 +18,7 @@ export const routes: RouteObject[] = [
       { path: "market", element: <Market /> },
       { path: "login", element: <Login /> },
       { path: "register", element: <Register /> },
+
       {
         path: "dashboard",
         element: (
@@ -25,6 +27,16 @@ export const routes: RouteObject[] = [
           </ProtectedRoute>
         ),
       },
+
+      {
+        path: "creator",
+        element: (
+          <ProtectedRoute requireRole="creator">
+            <CreatorDashboard />
+          </ProtectedRoute>
+        ),
+      },
+
       {
         path: "profile",
         element: (

@@ -42,7 +42,7 @@ export default function Market() {
                 <div className="text-xs text-gray-500">von {nft.creatorUsername}</div>
               )}
               <div className="pt-2">
-                <Link to={`/nfts/${nft._id}`} className="text-sm underline">Details</Link>
+                <Link to={`http://localhost:3002/api/nft/${nft._id}`} className="text-sm underline">Details</Link>
               </div>
             </div>
           </article>
