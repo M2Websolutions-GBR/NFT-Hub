@@ -10,13 +10,11 @@ type NFT = {
   isSoldOut: boolean;
   editionCount: number;
   editionLimit: number;
-  // creatorUsername?: string; // nur anzeigen, wenn euer Service das liefert
 };
 
 export default function Landing() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ["nfts", "landing"],
-    // ⚠️ Falls dein NFT-Service nicht /api/nfts sondern "/" bedient, ändere die URL entsprechend.
     queryFn: async () =>
       (await http.get<NFT[]>("http://localhost:3002/api/nft", {
         params: { onlyAvailable: true, limit: 6 },
@@ -37,10 +35,16 @@ export default function Landing() {
           Entdecke verfügbare Drops und sammle einzigartige Werke.
         </p>
         <div className="flex justify-center gap-4">
-          <Link to="/register" className="px-6 py-3 rounded-md bg-black text-white hover:opacity-90">
+          <Link
+            to="/register"
+            className="px-6 py-3 rounded-md bg-black text-white hover:opacity-90"
+          >
             Jetzt registrieren
           </Link>
-          <Link to="/market" className="px-6 py-3 rounded-md border hover:bg-gray-50">
+          <Link
+            to="/market"
+            className="px-6 py-3 rounded-md border hover:bg-gray-50"
+          >
             Zum Marktplatz
           </Link>
         </div>
@@ -50,7 +54,9 @@ export default function Landing() {
       <section className="max-w-6xl mx-auto px-4">
         <div className="flex items-end justify-between mb-6">
           <h2 className="text-2xl font-semibold">Jetzt verfügbar</h2>
-          <Link to="/market" className="text-sm underline">Alle ansehen</Link>
+          <Link to="/market" className="text-sm underline">
+            Alle ansehen
+          </Link>
         </div>
 
         {isLoading ? (
@@ -71,33 +77,56 @@ export default function Landing() {
           <p className="text-gray-600">Derzeit keine verfügbaren NFTs.</p>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
-            {featured.map((nft) => (
-              <article key={nft._id} className="border rounded-lg overflow-hidden">
-                <div className="aspect-[4/3] bg-gray-100">
-                  {nft.imageUrl ? (
-                    <img src={nft.imageUrl} alt={nft.title} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400">kein Bild</div>
-                  )}
-                </div>
-                <div className="p-4 space-y-2">
-                  <h3 className="font-medium line-clamp-1">{nft.title}</h3>
-                  <div className="text-sm text-gray-600">
-                    {/* Wenn Preis in Cents kommt: {(nft.price / 100).toFixed(2)} € */}
-                    {typeof nft.price === "number" ? `${nft.price.toFixed(2)} €` : "—"}
+            {featured.map((nft) => {
+              const sold = (nft as any).soldCount ?? nft.editionCount ?? 0;
+              const limit = nft.editionLimit ?? 0;
+              const isSold = Boolean(nft.isSoldOut) || (limit > 0 && sold >= limit);
+
+              return (
+                <article
+                  key={nft._id}
+                  className={`relative border rounded-lg overflow-hidden ${
+                    isSold ? "opacity-60 grayscale" : ""
+                  }`}
+                >
+                  <div className="aspect-[4/3] bg-gray-100 relative">
+                    {nft.imageUrl ? (
+                      <img
+                        src={nft.imageUrl}
+                        alt={nft.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400">
+                        kein Bild
+                      </div>
+                    )}
+
+                    {isSold && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                        <span className="text-white text-lg font-semibold uppercase tracking-wider">
+                          Verkauft
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  {/* Optional, nur wenn vorhanden
-                  {nft.creatorUsername && (
-                    <div className="text-xs text-gray-500">von {nft.creatorUsername}</div>
-                  )} */}
-                  <div className="pt-2">
-                    <Link to={`/nfts/${nft._id}`} className="text-sm underline">
-                      Details
-                    </Link>
+
+                  <div className="p-4 space-y-2">
+                    <h3 className="font-medium line-clamp-1">{nft.title}</h3>
+                    <div className="text-sm text-gray-600">
+                      {typeof nft.price === "number"
+                        ? `${nft.price.toFixed(2)} €`
+                        : "—"}
+                    </div>
+                    <div className="pt-2">
+                      <Link to={`/nfts/${nft._id}`} className="text-sm underline">
+                        Details
+                      </Link>
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              );
+            })}
           </div>
         )}
       </section>
