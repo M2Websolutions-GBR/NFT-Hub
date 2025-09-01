@@ -1,7 +1,7 @@
 // src/pages/Market.tsx
 import { useQuery } from "@tanstack/react-query";
-import http from "../api/http";
 import { Link } from "react-router-dom";
+import httpNft from "../api/httpnft";
 
 type NFT = {
     _id: string;
@@ -18,7 +18,7 @@ export default function Market() {
     const { data, isLoading, isError } = useQuery({
         queryKey: ["nfts"],
         queryFn: async () =>
-            (await http.get<NFT[]>("http://localhost:3002/api/nft")).data,
+            (await httpNft.get<NFT[]>("/api/nft")).data,
     });
 
     if (isLoading) return <div>lade NFTs…</div>;

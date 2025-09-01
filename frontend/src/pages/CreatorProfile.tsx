@@ -44,9 +44,14 @@ export default function CreatorProfile() {
         httpAuth.get<Creator>(`/api/auth/user/${creatorId}`),
         httpNft.get<NFT[]>(`/api/nft`, { params: { creatorId } }),
       ]);
-      return { creator: creatorRes.data, nfts: nftsRes.data ?? [] };
-    },
-    retry: false,
+       const nftsRaw = nftsRes.data ?? [];
+    const nfts = nftsRaw.filter((n) => String((n as any).creatorId) === String(creatorId));
+
+    console.log("[CreatorProfile] NFTs vom Service:", nftsRaw.length, "→ nach Filter:", nfts.length);
+
+    return { creator: creatorRes.data, nfts };
+  },
+  retry: false,
   });
 
   // Stats IMMER berechnen (Hook-Reihenfolge wahren), aber defensiv

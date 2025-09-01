@@ -10,7 +10,7 @@ export default function AppShell() {
     ? user.role === "creator"
       ? "/creator"
       : "/market"
-    : "/";
+    : "/market";
 
 
 return (

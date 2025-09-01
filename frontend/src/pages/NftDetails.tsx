@@ -2,6 +2,8 @@
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useMemo, useRef, useState } from "react";
 import { useNftDetail } from "../hooks/useNftDetail";
+import { useQuery } from "@tanstack/react-query";
+import httpAuth from "../api/httpAuth";
 
 // ----------------- Utils -----------------
 const toNumber = (v: unknown, fallback = 0) => {
@@ -79,7 +81,17 @@ export default function NftDetails() {
 
   const { data, isLoading, isError, error } = useNftDetail(id || undefined);
   const nft = data?.nft;
-  const creator = data?.creator;
+  const creatorFromDetail = data?.creator;
+
+  const { data: creatorHydrated } = useQuery({
+    enabled: !!nft?.creatorId && !creatorFromDetail?.avatarUrl, // nur wenn nötig
+    queryKey: ["creator-hydrate", nft?.creatorId],
+    queryFn: async () => (await httpAuth.get(`/api/auth/user/${nft!.creatorId}`)).data,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const creator = creatorHydrated ?? creatorFromDetail;
+  console.log("[NftDetails] creator (final) =", creator);
 
   // Debug
   console.log("[NftDetails] id =", id);
@@ -173,22 +185,25 @@ export default function NftDetails() {
             </Link>
           </div>
 
-          {/* Creator Card */}
+          {/* Creator Card (mit Debug) */}
           {creator && (
             <div className="rounded-2xl border p-4 flex items-center gap-4">
               {creator.avatarUrl ? (
                 <img
                   src={creator.avatarUrl}
-                  alt="Creator"
-                  className="w-14 h-14 rounded-full object-cover border"
+                  alt="Avatar"
+                  className="w-16 h-16 rounded-full object-cover border"
                 />
-              ) : (
-                <div className="w-14 h-14 rounded-full bg-gray-200 border grid place-items-center text-sm text-gray-600">
-                  {(creator.username || creator.email || "?")
-                    .slice(0, 2)
-                    .toUpperCase()}
-                </div>
-              )}
+              ) : null}
+
+              {/* Fallback-Initialen (sichtbar, wenn kein avatarUrl oder Bildfehler) */}
+              <div
+                style={{ display: creator.avatarUrl ? "none" : "grid" }}
+                className="w-14 h-14 rounded-full bg-gray-200 border place-items-center text-sm text-gray-600"
+                title={creator.avatarUrl ? creator.avatarUrl : "Kein Avatar gesetzt"}
+              >
+                {(creator.username || creator.email || "?").slice(0, 2).toUpperCase()}
+              </div>
 
               <div className="flex-1">
                 <div className="font-medium">
@@ -201,9 +216,11 @@ export default function NftDetails() {
                 )}
               </div>
 
+              {/* Hinweis: Falls /creator dein internes Dashboard ist, lieber /creators/:id für öffentliche Profile nutzen */}
               <Link to={`/creator/${nft.creatorId}`} className="text-sm underline">
                 Profil ansehen
               </Link>
+
             </div>
           )}
         </div>
