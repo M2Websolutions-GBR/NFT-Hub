@@ -9,6 +9,7 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 import ProfileEdit from "./pages/ProfilEdit";
 import CreatorDashboard from "./pages/CreatrorDashboard";
 import NftDetails from "./pages/NftDetails";
+import CreatorProfile from "./pages/CreatorProfile";
 
 export const routes: RouteObject[] = [
     {
@@ -20,7 +21,8 @@ export const routes: RouteObject[] = [
             { path: "login", element: <Login /> },
             { path: "register", element: <Register /> },
             { path: "details", element: <NftDetails /> },
-            
+            { path: "creator/:id", element: <CreatorProfile /> },
+
             {
                 path: "dashboard",
                 element: (

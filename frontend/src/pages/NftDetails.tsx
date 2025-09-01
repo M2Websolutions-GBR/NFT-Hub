@@ -59,11 +59,9 @@ function ImageMagnifier({
             backgroundImage: `url(${src})`,
             backgroundRepeat: "no-repeat",
             backgroundSize: `${zoom * 100}% ${zoom * 100}%`,
-            backgroundPosition: `${
-              ((pos.x || 0) / (wrapRef.current?.clientWidth || 1)) * 100
-            }% ${
-              ((pos.y || 0) / (wrapRef.current?.clientHeight || 1)) * 100
-            }%`,
+            backgroundPosition: `${((pos.x || 0) / (wrapRef.current?.clientWidth || 1)) * 100
+              }% ${((pos.y || 0) / (wrapRef.current?.clientHeight || 1)) * 100
+              }%`,
           }}
         />
       )}
