@@ -6,11 +6,20 @@ export default function AppShell() {
     const { user } = useAuth();
     const nav = useNavigate();
 
- const brandTo = user
-    ? user.role === "creator"
-      ? "/creator"
-      : "/market"
-    : "/market";
+const brandTo = (() => {
+  if (!user) return "/market"; // nicht eingeloggt → Market
+
+  switch (user.role) {
+    case "admin":
+      return "/admin";          // Admin Dashboard
+    case "creator":
+      return "/creator";        // Creator Dashboard
+    case "buyer":
+      return "/market";         // normale User → Market
+    default:
+      return "/market";         // Fallback
+  }
+})(); 
 
 
 return (

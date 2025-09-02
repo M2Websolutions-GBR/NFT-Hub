@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import routes from './routes/index.js';
 import meRoutes from "./routes/me.routes.js";
 import nftRoutes from "./routes/nft.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
 
 dotenv.config();
 
@@ -16,6 +17,10 @@ app.use(meRoutes);
 app.use(nftRoutes);
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
+
+
+app.use("/api/admin", adminRoutes);
+
 
 app.use('/', routes);
 

@@ -48,7 +48,15 @@ const NFTSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true // wichtig!
-    }
+    },
+    isBlocked: {
+      type: Boolean,
+      default: false
+    },
+    blockedReason: {
+      type: String,
+      default: ""
+    },
   },
   { timestamps: true }
 );

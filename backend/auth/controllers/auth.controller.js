@@ -135,6 +135,79 @@ export const getUserById = async (req, res) => {
   }
 };
 
+export const listUsersAdmin = async (req, res) => {
+  try {
+    const { q = "", limit = 50, page = 1 } = req.query;
+    const query = q
+      ? {
+          $or: [
+            { email: { $regex: q, $options: "i" } },
+            { username: { $regex: q, $options: "i" } },
+            { role: { $regex: q, $options: "i" } },
+          ],
+        }
+      : {};
+
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const [items, total] = await Promise.all([
+      User.find(query)
+        .select("_id email username role isSuspended suspensionReason suspensionUntil avatarUrl createdAt")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit)),
+      User.countDocuments(query),
+    ]);
+
+    res.json({
+      items,
+      total,
+      page: Number(page),
+      pages: Math.ceil(total / Number(limit)),
+    });
+  } catch (e) {
+    console.error("[auth/admin/users] error:", e.message);
+    res.status(500).json({ message: "Failed to list users" });
+  }
+};
+
+export const suspendUser = async (req, res) => {
+  const { id } = req.params;
+  const { reason = "", until = null } = req.body || {};
+  console.log("[AUTH:suspend] id:", id, "reason:", reason, "until:", until);
+
+  try {
+    const doc = await User.findByIdAndUpdate(
+      id,
+      { $set: { isSuspended: true, suspensionReason: reason, suspensionUntil: until } },
+      { new: true }
+    );
+    if (!doc) return res.status(404).json({ message: "User not found" });
+    res.json(doc);
+  } catch (e) {
+    console.error("[AUTH:suspend] error:", e.message);
+    res.status(500).json({ message: "Failed to suspend user" });
+  }
+};
+
+export const unsuspendUser = async (req, res) => {
+  const { id } = req.params;
+  console.log("[AUTH:unsuspend] id:", id);
+
+  try {
+    const doc = await User.findByIdAndUpdate(
+      id,
+      { $set: { isSuspended: false }, $unset: { suspensionReason: 1, suspensionUntil: 1 } },
+      { new: true }
+    );
+    if (!doc) return res.status(404).json({ message: "User not found" });
+    res.json(doc);
+  } catch (e) {
+    console.error("[AUTH:unsuspend] error:", e.message);
+    res.status(500).json({ message: "Failed to unsuspend user" });
+  }
+};
+
 export const subscribeUser = async (req, res) => {
   try {
     const { id } = req.params;

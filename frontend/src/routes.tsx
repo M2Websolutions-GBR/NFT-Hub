@@ -10,6 +10,7 @@ import ProfileEdit from "./pages/ProfilEdit";
 import CreatorDashboard from "./pages/CreatrorDashboard";
 import NftDetails from "./pages/NftDetails";
 import CreatorProfile from "./pages/CreatorProfile";
+import AdminDashboard from "./pages/AdminDashboard";
 
 export const routes: RouteObject[] = [
     {
@@ -31,6 +32,15 @@ export const routes: RouteObject[] = [
                     </ProtectedRoute>
                 ),
             },
+            {
+                path: "/admin",
+                element: (
+                    <ProtectedRoute requireRole="admin">
+                        <AdminDashboard />
+                    </ProtectedRoute>
+                )
+            },
+
             
             {
                 path: "creator",

@@ -40,12 +40,24 @@ const UserSchema = new mongoose.Schema(
       type: String,
       default: ""
     },
-    avatarUrl: { 
-      type: String, 
-      default: "" 
-    }, 
-    
-},
+    avatarUrl: {
+      type: String,
+      default: ""
+    },
+    isSuspended: {
+      type: Boolean,
+      default: false
+    },
+    suspensionReason: {
+      type: String,
+      default: ""
+    },
+    suspensionUntil: {
+      type: Date,
+      default: null
+    },
+
+  },
   { timestamps: true }
 );
 

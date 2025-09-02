@@ -171,6 +171,43 @@ export const deleteNFT = async (req, res) => {
   }
 };
 
+export const blockNft = async (req, res) => {
+  const { id } = req.params;
+  const { reason = "" } = req.body || {};
+  console.log("[NFT:block] id:", id, "reason:", reason);
+
+  try {
+    const doc = await NFT.findByIdAndUpdate(
+      id,
+      { $set: { isBlocked: true, blockedReason: reason } },
+      { new: true }
+    );
+    if (!doc) return res.status(404).json({ message: "NFT not found" });
+    res.json(doc);
+  } catch (e) {
+    console.error("[NFT:block] error:", e.message);
+    res.status(500).json({ message: "Failed to block NFT" });
+  }
+};
+
+export const unblockNft = async (req, res) => {
+  const { id } = req.params;
+  console.log("[NFT:unblock] id:", id);
+
+  try {
+    const doc = await NFT.findByIdAndUpdate(
+      id,
+      { $set: { isBlocked: false }, $unset: { blockedReason: 1 } },
+      { new: true }
+    );
+    if (!doc) return res.status(404).json({ message: "NFT not found" });
+    res.json(doc);
+  } catch (e) {
+    console.error("[NFT:unblock] error:", e.message);
+    res.status(500).json({ message: "Failed to unblock NFT" });
+  }
+};
+
 export const getAllNFTs = async (req, res) => {
   try {
     const nfts = await NFT.find().sort({ createdAt: -1 }); // Neueste zuerst

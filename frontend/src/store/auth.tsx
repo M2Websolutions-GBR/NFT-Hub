@@ -1,7 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import http from "../api/http";
+import httpAuth from "../api/httpAuth";
 import { getAvatarSign, uploadToCloudinary } from "../lib/avatar";
+
 
 
 type Role = "admin" | "creator" | "buyer" | string;
@@ -16,6 +17,7 @@ export type User = {
   role?: Role;
   isSubscribed?: boolean;
   profileInfo?: string;
+  avatarUrl?: string
 };
 
 type State = {
@@ -29,7 +31,8 @@ type State = {
     password: string,
     username: string,
     role?: Role,
-    profileInfo?: string
+    profileInfo?: string,
+    avatarUrl?: string
   ) => Promise<void>; // 👈 jetzt konsistent zur Implementierung
   updateProfile: (patch: Patch) => Promise<void>; // neu
   logout: () => void;
@@ -46,7 +49,7 @@ export const useAuthState = create<State>()(
 
       fetchMe: async () => {
         try {
-          const { data } = await http.get("http://localhost:3001/api/auth/me");
+          const { data } = await httpAuth.get("/api/auth/me");
           set({ user: data });
           return data;
         } catch {
@@ -56,7 +59,7 @@ export const useAuthState = create<State>()(
       },
 
       login: async (email, password) => {
-        const { data } = await http.post("http://localhost:3001/api/auth/login", { email, password });
+        const { data } = await httpAuth.post("/api/auth/login", { email, password });
         set({ token: data.token });
         await get().fetchMe();
       },
@@ -71,12 +74,12 @@ export const useAuthState = create<State>()(
         const payload: Record<string, unknown> = { email, password, username, role };
         if (profileInfo?.trim()) payload.profileInfo = profileInfo.trim();
 
-        const { data } = await http.post("http://localhost:3001/api/auth/register", payload);
+        const { data } = await httpAuth.post("/api/auth/register", payload);
         set({ token: data.token });
         await get().fetchMe();
       },
       updateProfile: async (patch: Patch) => {
-  const { data } = await http.patch("http://localhost:3010/me", patch);
+  const { data } = await httpAuth.patch("/me", patch);
   const prev = get().user || null;
   set({ user: { ...(prev || {} as User), ...data } });
 },
