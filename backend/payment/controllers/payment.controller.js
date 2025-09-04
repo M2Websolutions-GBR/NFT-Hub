@@ -32,8 +32,8 @@ export const createCheckoutSession = async (req, res) => {
                 nftId,
                 buyerId,
             },
-            success_url: 'http://localhost:5173/success',
-            cancel_url: 'http://localhost:5173/cancel',
+            success_url: `${process.env.CLIENT_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${process.env.CLIENT_URL}/checkout/cancel`,
         });
 
 
@@ -87,3 +87,19 @@ export const createSubscriptionCheckout = async (req, res) => {
     }
 };
 
+export const getOrderBySession = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    if (!sessionId) return res.status(400).json({ message: "sessionId required" });
+
+    const order = await Order.findOne({ stripeSessionId: sessionId });
+    res.set("Cache-Control", "no-store");
+
+    if (!order) return res.status(404).json({ message: "Order not found" });
+    return res.json(order);
+  } catch (e) {
+    console.error("[payment] getOrderBySession error:", e.message);
+    res.set("Cache-Control", "no-store");
+    return res.status(500).json({ message: "Failed to load order" });
+  }
+};

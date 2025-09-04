@@ -47,6 +47,18 @@ export const getAllOrders = async (req, res) => {
   }
 };
 
+export const getOrderBySession = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const order = await Order.findOne({ stripeSessionId: sessionId });
+    if (!order) return res.status(404).json({ message: "Order not found" });
+    res.json(order);
+  } catch (e) {
+    console.error("[getOrderBySession] error:", e.message);
+    res.status(500).json({ message: "Failed to fetch order" });
+  }
+};
+
 export const refundOrder = async (req, res) => {
   const { id } = req.params;
   const { reason = "" } = req.body || {};

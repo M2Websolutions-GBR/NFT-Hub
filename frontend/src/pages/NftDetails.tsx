@@ -4,6 +4,10 @@ import { useMemo, useRef, useState } from "react";
 import { useNftDetail } from "../hooks/useNftDetail";
 import { useQuery } from "@tanstack/react-query";
 import httpAuth from "../api/httpAuth";
+import httpPayment from "../api/httpPayment"
+import { useAuth } from "../store/auth";
+
+
 
 // ----------------- Utils -----------------
 const toNumber = (v: unknown, fallback = 0) => {
@@ -75,6 +79,7 @@ function ImageMagnifier({
 export default function NftDetails() {
   const loc = useLocation();
   const [query] = useSearchParams();
+  const [buying, setBuying] = useState(false);
 
   // ID aus state oder ?id=
   const id = (loc.state as any)?.id || query.get("id");
@@ -82,22 +87,17 @@ export default function NftDetails() {
   const { data, isLoading, isError, error } = useNftDetail(id || undefined);
   const nft = data?.nft;
   const creatorFromDetail = data?.creator;
+  const { user } = useAuth();
 
+  // Creator ggf. “hydraten”, wenn im Detail kein avatarUrl mitkam
   const { data: creatorHydrated } = useQuery({
-    enabled: !!nft?.creatorId && !creatorFromDetail?.avatarUrl, // nur wenn nötig
+    enabled: !!nft?.creatorId && !creatorFromDetail?.avatarUrl,
     queryKey: ["creator-hydrate", nft?.creatorId],
     queryFn: async () => (await httpAuth.get(`/api/auth/user/${nft!.creatorId}`)).data,
     staleTime: 5 * 60 * 1000,
   });
 
   const creator = creatorHydrated ?? creatorFromDetail;
-  console.log("[NftDetails] creator (final) =", creator);
-
-  // Debug
-  console.log("[NftDetails] id =", id);
-  console.log("[NftDetails] nft =", nft);
-  console.log("[NftDetails] creator =", creator);
-  console.log("[NftDetails] isLoading =", isLoading, "isError =", isError, "error =", error);
 
   if (!id) {
     return (
@@ -122,7 +122,53 @@ export default function NftDetails() {
     return <div className="py-16 text-center text-red-600">NFT nicht gefunden.</div>;
   }
 
-  return (
+  const handleBuy = async () => {
+    if (!user?.id && !user?._id) {
+      alert("Bitte einloggen, um zu kaufen.");
+      return;
+    }
+    if (stats.isSold) {
+      alert("Dieses NFT ist nicht mehr verfügbar.");
+      return;
+    }
+    // Optional: Creator darf eigene NFTs nicht kaufen
+    if ((user?.id || user?._id) === nft.creatorId) {
+      alert("Du kannst dein eigenes NFT nicht kaufen.");
+      return;
+    }
+
+    try {
+      setBuying(true);
+
+      // Passe den Pfad an DEINE Backend-Route an:
+      // Wenn dein Backend /api/payment/create-checkout-session nutzt, dann:
+      // const CHECKOUT_PATH = "/api/payment/create-checkout-session";
+      const CHECKOUT_PATH = "/api/payment/create-checkout-session";
+
+      const payload = {
+        title: nft.title,
+        price: nft.price,     // falls dein Backend Cents will: Math.round(nft.price * 100)
+        nftId: nft._id,
+        buyerId: user?.id || user?._id, // <- robust ermittelt
+      };
+
+      const res = await httpPayment.post(CHECKOUT_PATH, payload);
+      if (res.data?.url) {
+        window.location.href = res.data.url; // Weiterleitung zu Stripe
+      } else {
+        console.error("[NftDetails] Keine URL im Checkout-Response:", res.data);
+        alert("Konnte Checkout-Session nicht erstellen.");
+      }
+    } catch (err: any) {
+      console.error("[NftDetails] Kauf-Fehler:", err?.response?.data || err?.message);
+      alert(err?.response?.data?.message || "Fehler beim Starten des Kaufprozesses");
+    } finally {
+      setBuying(false);
+    }
+  };
+
+
+ return (
     <section className="max-w-5xl mx-auto space-y-8">
       <div className="grid lg:grid-cols-2 gap-8">
         {/* Bild + Zoom */}
@@ -169,8 +215,12 @@ export default function NftDetails() {
           {/* CTA */}
           <div className="flex items-center gap-3">
             {!stats.isSold ? (
-              <button className="inline-flex items-center rounded-md bg-black text-white px-4 py-2 hover:opacity-90">
-                Kaufen
+              <button
+                onClick={handleBuy}
+                disabled={buying}
+                className="inline-flex items-center rounded-md bg-black text-white px-4 py-2 hover:opacity-90 disabled:opacity-60"
+              >
+                {buying ? "Starte Kauf…" : "Kaufen"}
               </button>
             ) : (
               <button
@@ -185,25 +235,21 @@ export default function NftDetails() {
             </Link>
           </div>
 
-          {/* Creator Card (mit Debug) */}
+          {/* Creator Card */}
           {creator && (
             <div className="rounded-2xl border p-4 flex items-center gap-4">
               {creator.avatarUrl ? (
                 <img
                   src={creator.avatarUrl}
-                  alt="Avatar"
-                  className="w-16 h-16 rounded-full object-cover border"
+                  alt="Creator"
+                  className="w-14 h-14 rounded-full object-cover border"
+                  referrerPolicy="no-referrer"
                 />
-              ) : null}
-
-              {/* Fallback-Initialen (sichtbar, wenn kein avatarUrl oder Bildfehler) */}
-              <div
-                style={{ display: creator.avatarUrl ? "none" : "grid" }}
-                className="w-14 h-14 rounded-full bg-gray-200 border place-items-center text-sm text-gray-600"
-                title={creator.avatarUrl ? creator.avatarUrl : "Kein Avatar gesetzt"}
-              >
-                {(creator.username || creator.email || "?").slice(0, 2).toUpperCase()}
-              </div>
+              ) : (
+                <div className="w-14 h-14 rounded-full bg-gray-200 border grid place-items-center text-sm text-gray-600">
+                  {(creator.username || creator.email || "?").slice(0, 2).toUpperCase()}
+                </div>
+              )}
 
               <div className="flex-1">
                 <div className="font-medium">
@@ -216,11 +262,9 @@ export default function NftDetails() {
                 )}
               </div>
 
-              {/* Hinweis: Falls /creator dein internes Dashboard ist, lieber /creators/:id für öffentliche Profile nutzen */}
               <Link to={`/creator/${nft.creatorId}`} className="text-sm underline">
                 Profil ansehen
               </Link>
-
             </div>
           )}
         </div>

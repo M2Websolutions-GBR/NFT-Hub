@@ -11,6 +11,8 @@ import CreatorDashboard from "./pages/CreatrorDashboard";
 import NftDetails from "./pages/NftDetails";
 import CreatorProfile from "./pages/CreatorProfile";
 import AdminDashboard from "./pages/AdminDashboard";
+import CheckoutSuccess from "./pages/CheckoutSuccess";
+import CheckoutCancel from "./pages/CheckoutCancel";
 
 export const routes: RouteObject[] = [
     {
@@ -41,7 +43,7 @@ export const routes: RouteObject[] = [
                 )
             },
 
-            
+
             {
                 path: "creator",
                 element: (
@@ -49,6 +51,20 @@ export const routes: RouteObject[] = [
                         <CreatorDashboard />
                     </ProtectedRoute>
                 ),
+            },
+            {
+                path: "checkout/success",
+                element:
+                    <ProtectedRoute>
+                        <CheckoutSuccess />
+                    </ProtectedRoute>
+            },
+            {
+                path: "checkout/cancel",
+                element:
+                    <ProtectedRoute>
+                        <CheckoutCancel />
+                    </ProtectedRoute>
             },
 
             {

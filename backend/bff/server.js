@@ -6,6 +6,7 @@ import routes from './routes/index.js';
 import meRoutes from "./routes/me.routes.js";
 import nftRoutes from "./routes/nft.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
+import PublicRoutes from "./routes/payment.routes.js"
 
 dotenv.config();
 
@@ -16,13 +17,14 @@ app.use(morgan('dev'));
 app.use(meRoutes);
 app.use(nftRoutes);
 
+
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
-
+app.use(PublicRoutes);       // WICHTIG: Router mounten!
 app.use("/api/admin", adminRoutes);
 
 
-app.use('/', routes);
+// app.use('/', routes);
 
 const PORT = process.env.PORT || 3010;
-app.listen(PORT, () => console.log(`gateway-bff running on ${PORT}`));
+app.listen(3010, "0.0.0.0", () => console.log("BFF on :3010"));

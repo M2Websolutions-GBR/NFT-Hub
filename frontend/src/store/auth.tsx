@@ -12,6 +12,7 @@ type Patch = { username?: string; profileInfo?: string; avatarUrl?: string };
 
 export type User = {
   id: string;
+  _id: string;
   email: string;
   username?: string;
   role?: Role;

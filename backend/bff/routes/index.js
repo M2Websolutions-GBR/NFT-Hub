@@ -7,4 +7,5 @@ const router = Router();
 router.use('/api', meRoutes);
 router.use('/api', adminRoutes);
 
+
 export default router;
