@@ -3,12 +3,13 @@ import { persist } from "zustand/middleware";
 import httpAuth from "../api/httpAuth";
 import { getAvatarSign, uploadToCloudinary } from "../lib/avatar";
 
-
-
 type Role = "admin" | "creator" | "buyer" | string;
-type Patch = { username?: string; profileInfo?: string; avatarUrl?: string };
 
-
+type Patch = {
+  username?: string;
+  profileInfo?: string;
+  avatarUrl?: string;
+};
 
 export type User = {
   id: string;
@@ -18,14 +19,22 @@ export type User = {
   role?: Role;
   isSubscribed?: boolean;
   profileInfo?: string;
-  avatarUrl?: string
+  avatarUrl?: string;
+  subscriptionExpires: string | null; // ISO-Datum
+  isSuspended: boolean;
+  suspensionUntil: string | null;
+  suspensionReason?: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type State = {
   token: string | null;
   user: User | null;
+
   setAuth: (t: string, u?: User) => void;
   fetchMe: () => Promise<User | null>;
+
   login: (email: string, password: string) => Promise<void>;
   register: (
     email: string,
@@ -34,11 +43,13 @@ type State = {
     role?: Role,
     profileInfo?: string,
     avatarUrl?: string
-  ) => Promise<void>; // 👈 jetzt konsistent zur Implementierung
-  updateProfile: (patch: Patch) => Promise<void>; // neu
+  ) => Promise<void>;
+
+  updateProfile: (patch: Patch) => Promise<void>;
+  updateAvatar: (file: File) => Promise<void>;
+
   logout: () => void;
 };
-
 
 export const useAuthState = create<State>()(
   persist(
@@ -70,26 +81,29 @@ export const useAuthState = create<State>()(
         password: string,
         username: string,
         role: Role = "buyer",
-        profileInfo?: string
+        profileInfo?: string,
+        avatarUrl?: string
       ) => {
         const payload: Record<string, unknown> = { email, password, username, role };
         if (profileInfo?.trim()) payload.profileInfo = profileInfo.trim();
+        if (avatarUrl?.trim()) payload.avatarUrl = avatarUrl.trim();
 
         const { data } = await httpAuth.post("/api/auth/register", payload);
         set({ token: data.token });
         await get().fetchMe();
       },
-      updateProfile: async (patch: Patch) => {
-  const { data } = await httpAuth.patch("/me", patch);
-  const prev = get().user || null;
-  set({ user: { ...(prev || {} as User), ...data } });
-},
 
-updateAvatar: async (file: File) => {
-  const sig = await getAvatarSign("profile");        // Unterordner avatars/<uid>/profile
-  const up  = await uploadToCloudinary(file, sig);   // liefert secure_url
-  await get().updateProfile({ avatarUrl: up.secure_url });
-},
+      updateProfile: async (patch: Patch) => {
+        const { data } = await httpAuth.patch("/me", patch);
+        const prev = get().user || ({} as User);
+        set({ user: { ...prev, ...data } });
+      },
+
+      updateAvatar: async (file: File) => {
+        const sig = await getAvatarSign("profile");       // Unterordner avatars/<uid>/profile
+        const up = await uploadToCloudinary(file, sig);   // liefert secure_url
+        await get().updateProfile({ avatarUrl: up.secure_url });
+      },
 
       logout: () => set({ token: null, user: null }),
     }),

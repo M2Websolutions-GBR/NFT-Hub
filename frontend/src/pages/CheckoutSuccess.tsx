@@ -1,7 +1,9 @@
 // src/pages/CheckoutSuccess.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import http from "../api/http";
+import { useAuth } from "../store/auth";
+import { isCreatorActive } from "../lib/Subscription";
 
 type Order = {
   _id: string;
@@ -13,73 +15,123 @@ type Order = {
   createdAt: string;
 };
 
+type Mode = "order" | "subscription";
+
 export default function CheckoutSuccess() {
   const [query] = useSearchParams();
   const sessionId = query.get("session_id") || "";
-  const [order, setOrder] = useState<Order | null>(null);
-  const [tries, setTries] = useState(0);
+  const hardType = (query.get("type") || "").toLowerCase(); // "subscription" | "order" | ""
+
   const nav = useNavigate();
+  const { fetchMe } = useAuth();
+
+  // initialen Modus bestimmen: wenn "?type=subscription", direkt Subscription
+  const initialMode: Mode = hardType === "subscription" ? "subscription" : "order";
+  const [mode, setMode] = useState<Mode>(initialMode);
+
+  const [order, setOrder] = useState<Order | null>(null);
+
+  const started = useRef(false);       // StrictMode-Schutz (kein Doppellauf)
+  const tries = useRef(0);
+  const MAX_TRIES = 20;
+  const TICK_MS = 1000;
 
   useEffect(() => {
-    let timer: any;
+    if (!sessionId) return;
+    if (started.current) return;
+    started.current = true;
 
-    const fetchOrder = async () => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const pollSubscription = async () => {
+      const me = await fetchMe();
+      const active = isCreatorActive(me);
+      if (active) {
+        timer = setTimeout(() => nav("/creator", { replace: true }), 1000);
+        return;
+      }
+      tries.current++;
+      if (tries.current < MAX_TRIES) timer = setTimeout(pollSubscription, TICK_MS);
+    };
+
+    const tryOrderOnceThenMaybeSub = async () => {
+      // Wenn Typ hart Subscription ist, überspringen wir Order komplett
+      if (hardType === "subscription") {
+        setMode("subscription");
+        pollSubscription();
+        return;
+      }
+
       try {
+        // EINMAL Order prüfen
         const { data } = await http.get<Order>(`/api/payment/checkout/order-by-session/${sessionId}`);
+        setMode("order");
         setOrder(data);
 
         if (data.status === "paid") {
-          // 1–2s “Nice” Anzeige, dann Dashboard
-          setTimeout(() => nav("/dashboard", { replace: true }), 1200);
-        } else if (tries < 12) {
-          // weiter pollen (max. ~12 * 1s = 12 Sekunden)
-          timer = setTimeout(() => setTries((t) => t + 1), 1000);
+          timer = setTimeout(() => nav("/dashboard", { replace: true }), 1200);
+          return;
         }
-      } catch {
-        // wenn 404 (Webhook noch nicht gelaufen), weiter pollen
-        if (tries < 12) {
-          timer = setTimeout(() => setTries((t) => t + 1), 1000);
+
+        // pending → noch kurz pollen (optional)
+        tries.current++;
+        if (tries.current < MAX_TRIES) {
+          timer = setTimeout(tryOrderOnceThenMaybeSub, TICK_MS);
         }
+      } catch (e: any) {
+        // 404 → keine Order (Subscription-Fall) → auf Subscription-Modus schalten
+        setMode("subscription");
+        tries.current = 0;
+        pollSubscription();
       }
     };
 
-    if (sessionId) fetchOrder();
-    return () => clearTimeout(timer);
-  }, [sessionId, tries, nav]);
+    // Start
+    if (mode === "subscription") pollSubscription();
+    else tryOrderOnceThenMaybeSub();
+
+    return () => { if (timer) clearTimeout(timer); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, mode, hardType, nav, fetchMe]);
 
   if (!sessionId) {
-    return (
-      <div className="py-16 text-center text-red-600">
-        Keine Session-ID erhalten.
-      </div>
-    );
+    return <div className="py-16 text-center text-red-600">Keine Session-ID erhalten.</div>;
   }
 
   return (
     <div className="max-w-xl mx-auto text-center space-y-4 py-16">
       <h1 className="text-2xl font-semibold">Zahlung</h1>
-      {!order ? (
-        <p>Wir prüfen deine Zahlung …</p>
-      ) : order.status === "paid" ? (
+
+      {mode === "order" ? (
         <>
-          <p className="text-green-700">✅ Zahlung bestätigt! 🎉</p>
-          <p>Du wirst gleich zu deinem Dashboard weitergeleitet…</p>
-        </>
-      ) : order.status === "pending" ? (
-        <p className="text-gray-600">Zahlung noch ausstehend …</p>
-      ) : order.status === "failed" ? (
-        <>
-          <p className="text-red-600">Zahlung fehlgeschlagen.</p>
-          <Link className="underline" to="/market">Zurück zum Marktplatz</Link>
+          {!order ? (
+            <p>Wir prüfen deine Zahlung (Bestellung) …</p>
+          ) : order.status === "paid" ? (
+            <>
+              <p className="text-green-700">✅ Zahlung bestätigt! 🎉</p>
+              <p>Du wirst gleich zu deinem Dashboard weitergeleitet…</p>
+            </>
+          ) : order.status === "pending" ? (
+            <p className="text-gray-600">Zahlung noch ausstehend …</p>
+          ) : order.status === "failed" ? (
+            <>
+              <p className="text-red-600">Zahlung fehlgeschlagen.</p>
+              <Link className="underline" to="/market">Zurück zum Marktplatz</Link>
+            </>
+          ) : (
+            <>
+              <p>Status: {order.status}</p>
+              <Link className="underline" to="/market">Zurück zum Marktplatz</Link>
+            </>
+          )}
+          <p className="text-xs text-gray-500">Modus: Bestellung</p>
         </>
       ) : (
         <>
-          <p>Status: {order.status}</p>
-          <Link className="underline" to="/market">Zurück zum Marktplatz</Link>
+          <p className="text-gray-600">Wir aktivieren dein Abo …</p>
+          <p className="text-xs text-gray-500">Modus: Subscription</p>
         </>
       )}
     </div>
   );
 }
-
-

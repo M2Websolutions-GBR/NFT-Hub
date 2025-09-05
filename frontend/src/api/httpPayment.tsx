@@ -63,4 +63,20 @@ httpPayment.interceptors.response.use(
   }
 );
 
+export async function createCreatorCheckoutSession() {
+  const res = await httpPayment.post<{ url: string }>(
+    "api/payment/create-subscription-session"
+  );
+  return res.data;
+}
+
+// Stripe Portal (Abo verwalten/kündigen)
+export async function createCreatorPortalSession() {
+  const res = await httpPayment.post<{ url: string }>(
+    "/creator/portal-session"
+  );
+  return res.data;
+}
+
+
 export default httpPayment;

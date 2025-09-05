@@ -56,36 +56,37 @@ export const createCheckoutSession = async (req, res) => {
 };
 
 export const createSubscriptionCheckout = async (req, res) => {
-    const { userId, email } = req.body;
+  try {
+    // ⬇️ direkt aus JWT / Auth-Middleware
+    const userId = req.user?.id || req.user?._id;
+    const email = req.user?.email;
 
     if (!userId || !email) {
-        return res.status(400).json({ message: 'Missing userId or email' });
+      return res.status(400).json({ message: "Missing user information" });
     }
 
-    try {
-        const session = await stripe.checkout.sessions.create({
-            mode: 'subscription',
-            payment_method_types: ['card'],
-            customer_email: email,
-            line_items: [
-                {
-                    price: process.env.STRIPE_CREATOR_SUBSCRIPTION_PRICE,
-                    quantity: 1,
-                },
-            ],
-            metadata: {
-                userId,
-            },
-            success_url: 'http://localhost:5173/success-sub',
-            cancel_url: 'http://localhost:5173/cancel-sub',
-        });
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      payment_method_types: ["card"],
+      customer_email: email,
+      line_items: [
+        {
+          price: process.env.STRIPE_CREATOR_SUBSCRIPTION_PRICE,
+          quantity: 1,
+        },
+      ],
+      metadata: { userId: String(userId) },
+      success_url: `${process.env.CLIENT_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}&type=subscription`,
+      cancel_url: `${process.env.CLIENT_URL}/checkout/cancel?type=subscription`,
+    });
 
-        res.status(200).json({ url: session.url });
-    } catch (err) {
-        console.error('Stripe Subscription Error:', err);
-        res.status(500).json({ message: 'Failed to create subscription session' });
-    }
+    res.status(200).json({ url: session.url });
+  } catch (err) {
+    console.error("Stripe Subscription Error:", err);
+    res.status(500).json({ message: "Failed to create subscription session" });
+  }
 };
+
 
 export const getOrderBySession = async (req, res) => {
   try {
