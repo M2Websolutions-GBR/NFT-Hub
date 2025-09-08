@@ -260,6 +260,25 @@ export const getMyNFTs = async (req, res) => {
   }
 };
 
+export async function getByIds(req, res) {
+  try {
+    const ids = String(req.query.ids || "")
+      .split(",")
+      .map(s => s.trim())
+      .filter(Boolean);
+    if (!ids.length) return res.json([]);
+
+    const nfts = await NFT.find({ _id: { $in: ids } })
+      .select("_id title imageUrl price editionLimit editionCount isSoldOut creatorId createdAt")
+      .lean();
+
+    return res.json(nfts);
+  } catch (e) {
+    console.error("[nft] getByIds error:", e);
+    return res.status(500).json({ message: "Failed to load NFTs" });
+  }
+}
+
 export const getCreatorProfile = async (req, res) => {
   try {
     const { creatorId } = req.params;

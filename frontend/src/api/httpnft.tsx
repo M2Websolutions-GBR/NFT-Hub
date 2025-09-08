@@ -47,4 +47,5 @@ httpNft.interceptors.response.use(
   }
 );
 
+
 export default httpNft;

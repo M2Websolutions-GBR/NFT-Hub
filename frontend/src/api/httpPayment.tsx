@@ -77,6 +77,17 @@ export async function createCreatorPortalSession() {
   );
   return res.data;
 }
+export type Order = {
+  _id: string;
+  nftId: string;
+  amount: number;
+  status: "pending" | "paid" | "failed" | "refunded" | "void";
+  createdAt: string;
+};
 
+export async function getMyOrders() {
+  const { data } = await httpPayment.get<Order[]>("/api/orders/mine");
+  return data;
+}
 
 export default httpPayment;

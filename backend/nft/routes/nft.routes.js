@@ -2,6 +2,7 @@ import express from 'express';
 import { uploadNFT, getAllNFTs, getMyNFTs, getCreatorProfile, getNFTById, updateNFT, deleteNFT, markAsSold, downloadNFT, blockNft, unblockNft} from '../controllers/nft.controller.js';
 import { verifyToken, isCreator, isAdmin } from '../middleware/auth.middleware.js';
 import upload from '../middleware/upload.middleware.js';
+import { getByIds } from "../controllers/nft.controller.js";
 
 const router = express.Router();
 
@@ -17,5 +18,6 @@ router.patch('/sold/:id', markAsSold);
 router.get('/nft/download/:nftId', verifyToken, downloadNFT);
 router.patch("/:id/block", verifyToken, isAdmin, blockNft);
 router.patch("/:id/unblock", verifyToken, isAdmin, unblockNft);
+router.get("/batch", verifyToken, getByIds);
 
 export default router;
