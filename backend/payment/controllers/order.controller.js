@@ -47,6 +47,81 @@ export const getAllOrders = async (req, res) => {
   }
 };
 
+export const getMyOrdersAsCreator = async (req, res) => {
+  try {
+    // kommt vom BFF (JWT -> user.id), alternativ direkt, wenn ihr den payment-service separat testet
+   const creatorId =
+  req.user?.id ||
+  req.headers["x-user-id"] ||
+  req.query.creatorId; // ⬅️ Fallback über Query erlauben
+
+if (!creatorId) return res.status(401).json({ message: "Unauthorized: missing creator id" });
+
+    const { status = "paid", limit = 50, page = 1, q = "" } = req.query;
+
+
+    
+    const filter = { creatorId };
+    if (status !== "all") filter.status = status;
+
+    if (q) {
+      filter.$or = [
+        { nftId: { $regex: q, $options: "i" } },
+        { buyerId: { $regex: q, $options: "i" } },
+        { stripeSessionId: { $regex: q, $options: "i" } },
+        { status: { $regex: q, $options: "i" } },
+      ];
+    }
+
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const [items, total] = await Promise.all([
+      Order.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .select({
+          _id: 1,
+          creatorId: 1,
+          nftId: 1,
+          buyerId: 1,
+          amountCents: 1,      // passt ggf. auf euer Feld an (price/amount)
+          currency: 1,
+          status: 1,
+          createdAt: 1,
+          stripeSessionId: 1,
+          // buyerEmail o.ä. nur, wenn DSGVO-seitig ok:
+          buyerEmail: 1,
+        }),
+      Order.countDocuments(filter),
+    ]);
+
+    // Normalisiertes DTO (einheitlich fürs Frontend)
+    const mapped = items.map(o => ({
+      id: String(o._id),
+      nftId: String(o.nftId),
+      buyerId: o.buyerId,
+      price: o.amountCents,          // ggf. umbenennen, wenn euer Feld anders heißt
+      currency: o.currency || "eur",
+      status: o.status,
+      createdAt: o.createdAt,
+      stripeSessionId: o.stripeSessionId,
+      buyerEmail: o.buyerEmail,
+      creatorId: o.creatorId,
+    }));
+
+    res.json({
+      items: mapped,
+      total,
+      page: Number(page),
+      pages: Math.ceil(total / Number(limit)),
+    });
+  } catch (err) {
+    console.error("[getMyOrdersAsCreator] error:", err.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 export const getOrderBySession = async (req, res) => {
   try {
     const { sessionId } = req.params;

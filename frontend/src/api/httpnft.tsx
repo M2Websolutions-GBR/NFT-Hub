@@ -4,6 +4,7 @@ import { useAuthState } from "../store/auth";
 const httpNft = axios.create({
   baseURL: import.meta.env.VITE_API_NFT_URL || "http://localhost:3002",
   timeout: 15000,
+  withCredentials: false, // 🚫 wichtig: keine Cookies für NFT-Service
 });
 
 // REQUEST LOG
@@ -14,6 +15,7 @@ httpNft.interceptors.request.use((config) => {
     `%c[NFT] ➜ ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`,
     "color:#0ea5e9"
   );
+  console.debug("withCredentials:", config.withCredentials); // 👈 sichtbar machen
   console.debug("params:", config.params);
   console.debug("data:", config.data);
   console.groupEnd();

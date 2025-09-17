@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import httpNft from "../api/httpnft"; // <— Dateiname beachten!
+import http from "../api/http";
 import { useAuth } from "../store/auth";
 
 // Neu: Abo-UI
@@ -33,6 +34,30 @@ type UploadForm = {
   image: FileList; // muss "image" heißen (multer.single('image'))
 };
 
+// Orders + Formatter
+type CreatorOrder = {
+  id: string;
+  nftId: string;
+  amount?: number;       // 👈 neu: wir erwarten 'amount' aus Payment (Cents)
+  price?: number;
+  currency?: string;
+  status: "paid" | "refunded" | "failed" | "pending" | string;
+  createdAt: string;
+  buyerEmail?: string;
+  buyerName?: string;    // 👈 falls BFF das liefert
+  nftTitle?: string;
+  nftImage?: string;
+};
+
+type OrdersResponse = { items: CreatorOrder[]; page: number; pages: number; total: number };
+
+const formatEuroFromCents = (cents?: number, currency = "EUR") => {
+  const n = typeof cents === "number" ? cents : 0;
+  return new Intl.NumberFormat("de-DE", { style: "currency", currency }).format(n / 100);
+};
+const formatDateTime = (iso: string) =>
+  new Intl.DateTimeFormat("de-DE", { dateStyle: "short", timeStyle: "short" }).format(new Date(iso));
+
 export default function CreatorDashboard() {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -49,6 +74,9 @@ export default function CreatorDashboard() {
       return data;
     },
   });
+  const myNftIds = useMemo(() => {
+    return new Set((myNfts ?? []).map(n => String(n._id)));
+  }, [myNfts]);
 
   // ---- Stats berechnen ----
   const stats = useMemo(() => {
@@ -82,7 +110,6 @@ export default function CreatorDashboard() {
 
   const createNft = useMutation({
     mutationFn: async (formData: FormData) => {
-      // ✅ führender Slash wichtig, und multipart Header
       const { data } = await httpNft.post<NFT>("/api/nft/upload", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
@@ -124,6 +151,37 @@ export default function CreatorDashboard() {
     }
   };
 
+  // ---- Orders: State & Query ----
+  const [orderStatus, setOrderStatus] = useState<"paid" | "refunded" | "all">("paid");
+  const [orderPage, setOrderPage] = useState(1);
+  const [orderLimit] = useState(12);
+  const [orderQ, setOrderQ] = useState("");
+
+  const {
+    data: orderData,
+    isLoading: ordersLoading,
+    isError: ordersError,
+    isFetching: ordersFetching,
+  } = useQuery({
+    queryKey: ["creator-orders", { orderStatus, orderPage, orderLimit, orderQ }],
+    queryFn: async (): Promise<OrdersResponse> => {
+      const { data } = await http.get<OrdersResponse>("/api/creator/orders", {
+        params: { status: orderStatus, page: orderPage, limit: orderLimit, q: orderQ },
+      });
+      return data;
+    },
+    staleTime: 30_000,
+  });
+
+  // 🔹 Nur Orders behalten, deren nftId zu meinen NFTs gehört
+  const filteredOrders = useMemo(() => {
+    const items = orderData?.items ?? [];
+    // solange myNfts noch lädt, NICHT filtern, damit die Liste nicht „flackert“
+    if (!myNfts) return items;
+    return items.filter(o => myNftIds.has(String(o.nftId)));
+  }, [orderData?.items, myNfts, myNftIds]);
+
+
   return (
     <div className="mx-auto max-w-6xl space-y-8">
       {/* Profile / Header */}
@@ -148,14 +206,12 @@ export default function CreatorDashboard() {
               <p className="text-sm text-gray-600 max-w-prose">
                 {user?.profileInfo || "Beschreibe dich und deine Werke auf deiner Profilseite."}
               </p>
-              {/* Badge unter dem Namen */}
               <div className="mt-2">
                 <CreatorBadge user={user} />
               </div>
             </div>
           </div>
 
-          {/* Abo-Actions rechts */}
           <div className="flex items-center gap-3">
             <CreatorActions user={user} />
             <Link
@@ -187,7 +243,6 @@ export default function CreatorDashboard() {
           </div>
         </div>
 
-        {/* Hinweis-Banner wenn Abo fehlt oder inaktiv */}
         {!creatorActive && (
           <div className="mt-4 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
             <b>Creator-Abo benötigt.</b> Lade erst dein Abo, um NFTs hochzuladen und zu verwalten.
@@ -201,7 +256,6 @@ export default function CreatorDashboard() {
         <div className="lg:col-span-1 rounded-2xl border bg-white p-6">
           <h2 className="text-lg font-semibold mb-4">Neues NFT erstellen</h2>
 
-          {/* Upload-Form: disabled wenn kein aktives Abo */}
           <form id="nft-upload-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <fieldset disabled={!creatorActive} className="space-y-4">
               <label className="block">
@@ -284,7 +338,6 @@ export default function CreatorDashboard() {
               </button>
             </fieldset>
 
-            {/* Overlay CTA wenn inaktiv */}
             {!creatorActive && (
               <div className="mt-3 rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-700">
                 Dieses Formular ist gesperrt. <span className="font-medium">Werde Creator</span>, um NFTs hochzuladen.
@@ -333,9 +386,7 @@ export default function CreatorDashboard() {
                 return (
                   <article
                     key={nft._id}
-                    className={`relative border rounded-lg overflow-hidden ${
-                      isSold ? "opacity-60 grayscale" : ""
-                    }`}
+                    className={`relative border rounded-lg overflow-hidden ${isSold ? "opacity-60 grayscale" : ""}`}
                   >
                     <div className="aspect-[4/3] bg-gray-100 relative">
                       <img src={nft.imageUrl} alt={nft.title} className="w-full h-full object-cover" />
@@ -363,6 +414,123 @@ export default function CreatorDashboard() {
             </div>
           )}
         </div>
+
+        {/* Meine Verkäufe / Orders */}
+        <section className="lg:col-span-3 rounded-2xl border bg-white p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-semibold">Meine Verkäufe</h2>
+              <p className="text-sm text-gray-600">
+                Zeigt deine Orders (Status: {orderStatus}){ordersFetching ? " …lädt" : ""}.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                value={orderQ}
+                onChange={(e) => {
+                  setOrderQ(e.target.value);
+                  setOrderPage(1);
+                }}
+                placeholder="Suche (NFT-ID, Käufer, Status…)"
+                className="w-full sm:w-64 rounded-md border px-3 py-2 outline-none focus:ring-2 focus:ring-black/20"
+              />
+              <select
+                value={orderStatus}
+                onChange={(e) => {
+                  setOrderStatus(e.target.value as any);
+                  setOrderPage(1);
+                }}
+                className="rounded-md border px-3 py-2"
+              >
+                <option value="paid">Bezahlt</option>
+                <option value="refunded">Refunded</option>
+                <option value="all">Alle</option>
+              </select>
+            </div>
+          </div>
+
+          {ordersLoading ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="border rounded-lg overflow-hidden">
+                  <div className="aspect-[4/3] bg-gray-100 animate-pulse" />
+                  <div className="p-4 space-y-2">
+                    <div className="h-4 bg-gray-100 animate-pulse rounded w-2/3" />
+                    <div className="h-3 bg-gray-100 animate-pulse rounded w-1/3" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : ordersError ? (
+            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              Konnte Orders nicht laden.
+            </div>
+          ) : (filteredOrders.length ?? 0) === 0 ? (
+            <p className="text-gray-600">Noch keine Verkäufe deiner NFTs auf dieser Seite gefunden.</p>
+          ) : (
+            <>
+              <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {filteredOrders.map((o) => {
+                  const cents = typeof o.amount === "number" ? o.amount
+                    : typeof o.price === "number" ? o.price : 0;
+                  const currency = (o.currency || "EUR").toUpperCase();
+                  return (
+                    <li key={o.id} className="rounded-lg border overflow-hidden">
+                      <div className="flex gap-3 p-3">
+                        <div className="h-16 w-16 shrink-0 rounded-md overflow-hidden bg-gray-100 grid place-items-center text-xs text-gray-500">
+                          {o.nftImage ? (
+                            <img src={o.nftImage} alt={o.nftTitle ?? o.nftId} className="h-full w-full object-cover" />
+                          ) : (
+                            "NFT"
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="truncate font-medium">{o.nftTitle ?? `NFT #${o.nftId}`}</div>
+                          <div className="text-xs text-gray-600">{formatDateTime(o.createdAt)}</div>
+                          <div className="mt-1 text-sm">
+                            {formatEuroFromCents(cents, currency)}
+                            {o.status !== "paid" && (
+                              <span className="ml-2 rounded bg-yellow-500/20 px-1.5 py-0.5 text-xs uppercase">
+                                {o.status}
+                              </span>
+                            )}
+                          </div>
+                          {(o.buyerName || o.buyerEmail || (o as any).buyerId) && (
+                            <div className="text-xs text-gray-500 truncate">
+                              Gekauft von: {o.buyerName || o.buyerEmail || `User ${String((o as any).buyerId || "").slice(0, 6)}…`}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              <div className="mt-4 flex items-center justify-between">
+                <span className="text-sm text-gray-600">
+                  Seite {orderData?.page ?? orderPage} / {orderData?.pages ?? 1}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
+                    onClick={() => setOrderPage((p) => Math.max(1, p - 1))}
+                    disabled={(orderData?.page ?? orderPage) <= 1}
+                  >
+                    Zurück
+                  </button>
+                  <button
+                    className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
+                    onClick={() => setOrderPage((p) => p + 1)}
+                    disabled={(orderData?.page ?? orderPage) >= (orderData?.pages ?? 1)}
+                  >
+                    Weiter
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </section>
       </section>
     </div>
   );

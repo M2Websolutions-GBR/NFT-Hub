@@ -11,13 +11,13 @@ router.post('/upload', verifyToken, isCreator, upload.single('image'), uploadNFT
 router.get('/', getAllNFTs); // Öffentliche Route
 router.get('/mine', verifyToken, isCreator, getMyNFTs); // geschützt für Creator
 router.get('/creator/:creatorId', getCreatorProfile);
-router.get('/:id', getNFTById); // muss ganz unten stehen!
+router.get("/batch", verifyToken, getByIds);
 router.put('/:id', verifyToken, isCreator, updateNFT);
 router.delete('/:id', verifyToken, isCreator, deleteNFT);
 router.patch('/sold/:id', markAsSold);
 router.get('/nft/download/:nftId', verifyToken, downloadNFT);
 router.patch("/:id/block", verifyToken, isAdmin, blockNft);
 router.patch("/:id/unblock", verifyToken, isAdmin, unblockNft);
-router.get("/batch", verifyToken, getByIds);
+router.get('/:id', getNFTById); // muss ganz unten stehen!
 
 export default router;

@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getMyOrders } from "../api/httpPayment";
 import { getByIds } from "../api/nft";
 import type { Order } from "../api/httpPayment";
-import type { NFT } from "../api/nft";
+// import type { NFT } from "../api/nft";
 import { Link } from "react-router-dom";
 import { useAuth } from "../store/auth";
 // type Enriched = Order & { nft?: NFT };
