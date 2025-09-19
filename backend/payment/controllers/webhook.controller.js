@@ -19,6 +19,54 @@ const errlog = (...args) => console.error('[stripeWebhook]', ...args);
 // Best Practice: Stripe Webhook braucht *raw* body (in eurer Route sicherstellen!)
 // router.post("/webhook", express.raw({ type: 'application/json' }), webhookHandler);
 
+// ⬇️ EINFÜGEN – robuste Titelauflösung für Zertifikate
+async function resolveCertificateTitle({ session, nftServiceBase = 'http://nft-service:3002' }) {
+  const md = session?.metadata || {};
+  // 1) aus metadata (mehrere mögliche Keys erlauben)
+  const metaTitle =
+    md.title ?? md.nftTitle ?? md.name ?? md.productName ?? null;
+  if (metaTitle && String(metaTitle).trim()) {
+    return String(metaTitle).trim();
+  }
+
+  // 2) aus NFT-Service, falls nftId vorhanden
+  const nftId = md.nftId || md.nft_id || md.id;
+  if (nftId) {
+    try {
+      const { data } = await http.get(`${nftServiceBase}/api/nft/${nftId}`, { timeout: 8000 });
+      const name = data?.title ?? data?.name ?? data?.metadata?.name;
+      if (name && String(name).trim()) return String(name).trim();
+    } catch (e) {
+      warn('[resolveCertificateTitle] nft fetch failed:', e?.response?.status, e?.message);
+    }
+  }
+
+  // 3) aus Stripe line_items (Produktname)
+  try {
+    // sichergehen, dass wir die Produktnamen haben (falls nicht expanded):
+    const sessionFull = session?.line_items?.data?.length
+      ? session
+      : await stripe.checkout.sessions.retrieve(session.id, {
+        expand: ['line_items.data.price.product'],
+      });
+
+    const items = sessionFull?.line_items?.data || [];
+    for (const it of items) {
+      const pName =
+        it?.price?.product?.name ??
+        it?.description ??
+        it?.price?.nickname;
+      if (pName && String(pName).trim()) return String(pName).trim();
+    }
+  } catch (e) {
+    warn('[resolveCertificateTitle] stripe items failed:', e.message);
+  }
+
+  // 4) Fallback
+  return nftId ? `NFT #${nftId}` : 'Unnamed NFT';
+}
+
+
 export const webhookHandler = async (req, res) => {
   const sig = req.headers['stripe-signature'];
   let event;
@@ -105,9 +153,11 @@ export const webhookHandler = async (req, res) => {
 
           // Zertifikat erzeugen & E-Mail senden (Soft-Fail)
           try {
+            const certTitle = await resolveCertificateTitle({ session });
+
             const pdfPath = await createCertificatePDF({
               username,
-              title: title || 'Unnamed NFT',
+              title: certTitle, // <-- NICHT mehr 'title || ...'
               nftId,
             });
             log('certificate generated:', pdfPath);
@@ -116,7 +166,7 @@ export const webhookHandler = async (req, res) => {
               await sendCertificateEmail({
                 to: email,
                 username,
-                title: title || 'Unnamed NFT',
+                title: certTitle, // <-- gleicher Titel auch in der Mail
                 filePath: pdfPath,
               });
               log(`certificate sent to ${email}`);
