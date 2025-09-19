@@ -65,7 +65,7 @@ httpPayment.interceptors.response.use(
 
 export async function createCreatorCheckoutSession() {
   const res = await httpPayment.post<{ url: string }>(
-    "api/payment/create-subscription-session"
+    "/api/payment/create-subscription-session"
   );
   return res.data;
 }

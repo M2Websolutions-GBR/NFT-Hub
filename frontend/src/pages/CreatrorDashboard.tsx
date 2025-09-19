@@ -38,13 +38,13 @@ type UploadForm = {
 type CreatorOrder = {
   id: string;
   nftId: string;
-  amount?: number;       // 👈 neu: wir erwarten 'amount' aus Payment (Cents)
-  price?: number;
+  amount?: number;       // Cents (vom Payment-Service: field 'amount')
+  price?: number;        // Fallback
   currency?: string;
   status: "paid" | "refunded" | "failed" | "pending" | string;
   createdAt: string;
   buyerEmail?: string;
-  buyerName?: string;    // 👈 falls BFF das liefert
+  buyerName?: string;
   nftTitle?: string;
   nftImage?: string;
 };
@@ -74,8 +74,18 @@ export default function CreatorDashboard() {
       return data;
     },
   });
+
   const myNftIds = useMemo(() => {
-    return new Set((myNfts ?? []).map(n => String(n._id)));
+    return new Set((myNfts ?? []).map((n) => String(n._id)));
+  }, [myNfts]);
+
+  // 🔹 Map: nftId -> NFT (für schnellen Zugriff auf Titel/Bild)
+  const myNftsById = useMemo(() => {
+    const map = new Map<string, NFT>();
+    for (const n of myNfts ?? []) {
+      map.set(String(n._id), n);
+    }
+    return map;
   }, [myNfts]);
 
   // ---- Stats berechnen ----
@@ -178,9 +188,8 @@ export default function CreatorDashboard() {
     const items = orderData?.items ?? [];
     // solange myNfts noch lädt, NICHT filtern, damit die Liste nicht „flackert“
     if (!myNfts) return items;
-    return items.filter(o => myNftIds.has(String(o.nftId)));
+    return items.filter((o) => myNftIds.has(String(o.nftId)));
   }, [orderData?.items, myNfts, myNftIds]);
-
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
@@ -406,7 +415,9 @@ export default function CreatorDashboard() {
                         {nft.price.toFixed(2)} €
                         {/* Falls Cents: {(nft.price / 100).toFixed(2)} € */}
                       </div>
-                      <div className="text-xs text-gray-500">{sold}/{limit || "∞"} verkauft</div>
+                      <div className="text-xs text-gray-500">
+                        {sold}/{limit || "∞"} verkauft
+                      </div>
                     </div>
                   </article>
                 );
@@ -471,21 +482,28 @@ export default function CreatorDashboard() {
             <>
               <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {filteredOrders.map((o) => {
-                  const cents = typeof o.amount === "number" ? o.amount
-                    : typeof o.price === "number" ? o.price : 0;
+                  const cents =
+                    typeof o.amount === "number" ? o.amount : typeof o.price === "number" ? o.price : 0;
                   const currency = (o.currency || "EUR").toUpperCase();
+
+                  // 🔹 Metadaten aus deinen eigenen NFTs (Titel/Bild)
+                  const meta = myNftsById.get(String(o.nftId));
+                  const prettyId = String(o.nftId).slice(0, 8) + "…";
+                  const title = meta?.title ?? o.nftTitle ?? `NFT #${prettyId}`;
+                  const image = o.nftImage || meta?.imageUrl;
+
                   return (
                     <li key={o.id} className="rounded-lg border overflow-hidden">
                       <div className="flex gap-3 p-3">
                         <div className="h-16 w-16 shrink-0 rounded-md overflow-hidden bg-gray-100 grid place-items-center text-xs text-gray-500">
-                          {o.nftImage ? (
-                            <img src={o.nftImage} alt={o.nftTitle ?? o.nftId} className="h-full w-full object-cover" />
+                          {image ? (
+                            <img src={image} alt={title} className="h-full w-full object-cover" />
                           ) : (
                             "NFT"
                           )}
                         </div>
                         <div className="min-w-0">
-                          <div className="truncate font-medium">{o.nftTitle ?? `NFT #${o.nftId}`}</div>
+                          <div className="truncate font-medium">{title}</div>
                           <div className="text-xs text-gray-600">{formatDateTime(o.createdAt)}</div>
                           <div className="mt-1 text-sm">
                             {formatEuroFromCents(cents, currency)}
@@ -497,7 +515,8 @@ export default function CreatorDashboard() {
                           </div>
                           {(o.buyerName || o.buyerEmail || (o as any).buyerId) && (
                             <div className="text-xs text-gray-500 truncate">
-                              Gekauft von: {o.buyerName || o.buyerEmail || `User ${String((o as any).buyerId || "").slice(0, 6)}…`}
+                              Gekauft von:{" "}
+                              {o.buyerName || o.buyerEmail || `User ${String((o as any).buyerId || "").slice(0, 6)}…`}
                             </div>
                           )}
                         </div>

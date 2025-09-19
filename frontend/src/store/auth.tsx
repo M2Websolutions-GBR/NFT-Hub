@@ -94,7 +94,7 @@ export const useAuthState = create<State>()(
       },
 
       updateProfile: async (patch: Patch) => {
-        const { data } = await httpAuth.patch("/me", patch);
+        const { data } = await httpAuth.patch("api/auth/me", patch);
         const prev = get().user || ({} as User);
         set({ user: { ...prev, ...data } });
       },

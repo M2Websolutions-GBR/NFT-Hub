@@ -7,9 +7,8 @@ const orderSchema = new mongoose.Schema(
     stripeSessionId: { type: String, required: true, unique: true, index: true },
 
     // DB-Feld bleibt 'amount' — wir geben einen Alias 'amountCents' drauf
-    amount: { type: Number, required: true, min: 0, alias: "amountCents" },
-
-    currency: { type: String, default: "eur", lowercase: true }, // <- neu
+    amount: { type: Number, required: true },
+    currency: { type: String, default: 'EUR' },
 
     status: {
       type: String,

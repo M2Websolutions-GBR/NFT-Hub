@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import http from "../api/http";
+// import http from "../api/http";
+import httpNft from "../api/httpnft";
 
 type NFT = {
     _id: string;
@@ -16,7 +17,7 @@ export default function Landing() {
     const { data, isLoading, isError } = useQuery({
         queryKey: ["nfts", "landing"],
         queryFn: async () =>
-            (await http.get<NFT[]>("http://localhost:3002/api/nft", {
+            (await httpNft.get<NFT[]>("/api/nft", {
                 params: { onlyAvailable: true, limit: 6 },
             })).data,
     });

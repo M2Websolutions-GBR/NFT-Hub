@@ -4,7 +4,8 @@ import Landing from "./pages/Landing";
 import Market from "./pages/Market";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import Dashboard from "./pages/Dashboard";
+import Dashboard from "./pages/Dashboard"
+import DashboardGate from "./routes/DashboardGate";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import ProfileEdit from "./pages/ProfilEdit";
 import CreatorDashboard from "./pages/CreatrorDashboard";
@@ -30,20 +31,10 @@ export const routes: RouteObject[] = [
                 path: "dashboard",
                 element: (
                     <ProtectedRoute>
-                        <Dashboard />
+                        <DashboardGate />
                     </ProtectedRoute>
                 ),
             },
-            {
-                path: "/admin",
-                element: (
-                    <ProtectedRoute requireRole="admin">
-                        <AdminDashboard />
-                    </ProtectedRoute>
-                )
-            },
-
-
             {
                 path: "creator",
                 element: (
@@ -52,6 +43,23 @@ export const routes: RouteObject[] = [
                     </ProtectedRoute>
                 ),
             },
+            {
+                path: "admin",
+                element: (
+                    <ProtectedRoute requireRole="admin">
+                        <AdminDashboard />
+                    </ProtectedRoute>
+                )
+            },
+            {
+                path: "buyer",
+                element: (
+                    <ProtectedRoute requireRole="buyer">
+                        <Dashboard />
+                    </ProtectedRoute>
+                )
+            },
+
             {
                 path: "checkout/success",
                 element:
