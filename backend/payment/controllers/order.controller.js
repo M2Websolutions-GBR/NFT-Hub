@@ -1,4 +1,16 @@
 import Order from '../models/order.model.js';
+import axios from 'axios'
+
+
+function sanitizeBaseUrl(v) {
+  let s = (v || "").trim();
+  if (!s) return "http://nft-service:3002";     // Fallback auf Service-Namen
+  if (!/^https?:\/\//i.test(s)) s = "http://" + s; // fehlendes Protokoll ergänzen
+  s = s.replace(/\/+$/, "");                    // trailing slashes abschneiden
+  return s;
+}
+
+const NFT_BASE_URL = sanitizeBaseUrl(process.env.NFT_URL);
 
 export const getMyOrders = async (req, res) => {
   try {
@@ -150,11 +162,17 @@ export const getOrderBySession = async (req, res) => {
 
 export const refundOrder = async (req, res) => {
   const { id } = req.params;
-  const { reason = "" } = req.body || {};
+  const { reason = "" } = (req.body || {});
   console.log("[refundOrder] id:", id, "reason:", reason);
 
   try {
-    // TODO: Echten Stripe-Refund ausführen, falls verfügbar (payment_intent/charge benötigt)
+    // 1) Alten Status holen
+    const before = await Order.findById(id);
+    if (!before) return res.status(404).json({ message: "Order not found" });
+
+    const wasPaid = before.status === "paid";
+
+    // 2) Status auf refunded setzen
     const update = {
       status: "refunded",
       ...(Order.schema.path("refundedAt") ? { refundedAt: new Date() } : {}),
@@ -162,7 +180,11 @@ export const refundOrder = async (req, res) => {
     };
 
     const doc = await Order.findByIdAndUpdate(id, { $set: update }, { new: true });
-    if (!doc) return res.status(404).json({ message: "Order not found" });
+
+    // 3) Stückzahl zurückdrehen, nur wenn vorher bezahlt war
+    if (wasPaid) {
+      await adjustNftSold(before.nftId, -1);
+    }
 
     res.json(doc);
   } catch (err) {
@@ -174,11 +196,17 @@ export const refundOrder = async (req, res) => {
 // PATCH /api/orders/:id/void
 export const voidOrder = async (req, res) => {
   const { id } = req.params;
-  const { reason = "" } = req.body || {};
+  const { reason = "" } = (req.body || {});
   console.log("[voidOrder] id:", id, "reason:", reason);
 
   try {
-    // TODO: Echte Void/Cancel beim PSP, wenn möglich
+    // 1) Alten Status holen
+    const before = await Order.findById(id);
+    if (!before) return res.status(404).json({ message: "Order not found" });
+
+    const wasPaid = before.status === "paid";
+
+    // 2) Status auf void setzen
     const update = {
       status: "void",
       ...(Order.schema.path("voidedAt") ? { voidedAt: new Date() } : {}),
@@ -186,7 +214,11 @@ export const voidOrder = async (req, res) => {
     };
 
     const doc = await Order.findByIdAndUpdate(id, { $set: update }, { new: true });
-    if (!doc) return res.status(404).json({ message: "Order not found" });
+
+    // 3) Stückzahl zurückdrehen, nur wenn vorher bezahlt war
+    if (wasPaid) {
+      await adjustNftSold(before.nftId, -1);
+    }
 
     res.json(doc);
   } catch (err) {
@@ -194,4 +226,28 @@ export const voidOrder = async (req, res) => {
     res.status(500).json({ message: "Failed to void order" });
   }
 };
+
+async function adjustNftSold(nftId, delta) {
+  const safeId = encodeURIComponent(String(nftId || "").trim());
+  const payload = { delta };
+
+  const urls = [
+    `${NFT_BASE_URL}/api/nft/${safeId}/sold`,             // primär (ENV)
+    `http://nft-service:3002/api/nft/${safeId}/sold`,     // Fallback im Compose-Netz
+  ];
+
+  let lastErr;
+  for (const url of urls) {
+    try {
+      // Minimal-Check gegen "Invalid URL"
+      if (!/^https?:\/\/[^/]+/i.test(url)) throw new Error(`Bad URL composed: ${url}`);
+      await axios.patch(url, payload, { timeout: 8000 });
+      // console.log("[payment→nft] OK", url, payload);
+      return; // success
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  console.warn("[payment→nft] adjustNftSold failed:", lastErr?.message || lastErr);
+}
 
