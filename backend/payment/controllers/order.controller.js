@@ -85,7 +85,7 @@ if (!creatorId) return res.status(401).json({ message: "Unauthorized: missing cr
           creatorId: 1,
           nftId: 1,
           buyerId: 1,
-          amountCents: 1,      // passt ggf. auf euer Feld an (price/amount)
+          amount: 1,      // passt ggf. auf euer Feld an (price/amount)
           currency: 1,
           status: 1,
           createdAt: 1,
@@ -97,18 +97,32 @@ if (!creatorId) return res.status(401).json({ message: "Unauthorized: missing cr
     ]);
 
     // Normalisiertes DTO (einheitlich fürs Frontend)
-    const mapped = items.map(o => ({
-      id: String(o._id),
-      nftId: String(o.nftId),
-      buyerId: o.buyerId,
-      price: o.amountCents,          // ggf. umbenennen, wenn euer Feld anders heißt
-      currency: o.currency || "eur",
-      status: o.status,
-      createdAt: o.createdAt,
-      stripeSessionId: o.stripeSessionId,
-      buyerEmail: o.buyerEmail,
-      creatorId: o.creatorId,
-    }));
+const mapped = items.map(o => {
+  // raw aus DB (aktuell in EURO gespeichert)
+  const rawAmount = Number(o.amount);
+  // IMMER Cents an das BFF/Frontend geben
+  const amountCents = Number.isFinite(rawAmount) ? Math.round(rawAmount * 100) : 0;
+
+  return {
+    id: String(o._id),
+    nftId: String(o.nftId),
+    buyerId: o.buyerId,
+
+    // NEU: amount = Cents
+    amount: amountCents,
+
+    // Legacy-Feld (optional): bleibt identisch, wird aber auch als Cents geliefert
+    price: amountCents,
+
+    currency: (o.currency || "EUR").toUpperCase(),
+    status: o.status,
+    createdAt: o.createdAt,
+    stripeSessionId: o.stripeSessionId,
+    buyerEmail: o.buyerEmail,
+    creatorId: o.creatorId,
+  };
+});
+
 
     res.json({
       items: mapped,

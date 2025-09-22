@@ -35,8 +35,12 @@ const orderSchema = new mongoose.Schema(
 
 // optional: Sicherstellen, dass currency immer gesetzt wird
 orderSchema.pre("save", function (next) {
-  if (!this.currency) this.currency = "eur";
+  const cur = this.currency || "EUR";
+  this.currency = String(cur).toUpperCase();
   next();
 });
+
+
+
 
 export default mongoose.model("Order", orderSchema);

@@ -71,7 +71,9 @@ export const listCreatorOrders = async (req, res) => {
         buyerId: uid,
 
         // amount muss in Cents aus Payment kommen
-        amount:   typeof i.amount   === "number" ? i.amount : 0,
+        amount: (typeof i.amount === "number")
+  ? i.amount
+  : (typeof i.price === "number" ? i.price : 0),
         currency: (i.currency || "EUR").toUpperCase(),
 
         status: i.status,
