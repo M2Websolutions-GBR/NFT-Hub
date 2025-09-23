@@ -10,7 +10,7 @@ export type CloudSig = {
 
 export async function getAvatarSign(sub?: string): Promise<CloudSig> {
   const qs = sub ? `?sub=${encodeURIComponent(sub)}` : "";
-  const { data } = await http.post(`http://localhost:3010/api/profile/avatar/sign${qs}`);
+  const { data } = await http.post(`/api/profile/avatar/sign${qs}`);
   return data as CloudSig;
 }
 

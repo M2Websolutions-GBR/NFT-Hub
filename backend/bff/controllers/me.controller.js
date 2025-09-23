@@ -31,6 +31,7 @@ export const getMe = async (req, res) => {
     const paidOrders = ordersList.filter(o => o.status === 'paid');
     const isCreator = user.role === 'creator' && (user.isSubscribed ?? true);
     const isBuyer = paidOrders.length > 0;
+    
 
     res.json({
       user,

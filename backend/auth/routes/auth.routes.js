@@ -1,6 +1,6 @@
 import express from 'express';
-import { register, login, getUserById, subscribeUser, renewSubscription, getCurrentUser, updateMe } from '../controllers/auth.controller.js';
-import { verifyToken } from '../middleware/auth.middleware.js';
+import { register, login, getUserById, subscribeUser, renewSubscription, getCurrentUser, updateMe, listUsersAdmin, suspendUser, unsuspendUser } from '../controllers/auth.controller.js';
+import { verifyToken, isAdmin } from '../middleware/auth.middleware.js';
 
 
 
@@ -13,6 +13,10 @@ router.patch('/subscribe/:id', subscribeUser);
 router.patch('/renew-subscription/:userId', renewSubscription);
 router.get('/me', verifyToken, getCurrentUser);
 router.patch("/me", verifyToken, updateMe);
+
+router.get("/admin/user", verifyToken, isAdmin, listUsersAdmin);
+router.patch("/admin/user/:id/suspend", verifyToken, isAdmin, suspendUser);
+router.patch("/admin/user/:id/unsuspend", verifyToken, isAdmin, unsuspendUser);
 
 export default router;
 

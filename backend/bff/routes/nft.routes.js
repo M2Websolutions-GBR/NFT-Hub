@@ -5,7 +5,7 @@ import { NFT_URL } from "../config/serviceURLs.js";
 const router = Router();
 
 // Öffentliche Liste → proxyt auf NFT-Svc Root "/"
-router.get("http://localhost:3002/api/nfts", async (req, res) => {
+router.get("http://localhost:3002/api/nft", async (req, res) => {
   try {
     const { data } = await axios.get(`${NFT_URL}/`, {
       params: req.query, // => ?onlyAvailable=true&limit=6

@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { useAuth } from "../store/auth";
-import { useNavigate, Link, useLocation } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
 
 type FormValues = { email: string; password: string };
@@ -8,7 +8,6 @@ type FormValues = { email: string; password: string };
 export default function Login() {
   const { login } = useAuth();
   const nav = useNavigate();
-  const loc = useLocation();
   const [error, setError] = useState<string | null>(null);
 
   const { register, handleSubmit, formState: { isSubmitting } } =
@@ -18,8 +17,8 @@ export default function Login() {
     setError(null);
     try {
       await login(values.email, values.password);
-      const to = (loc.state as any)?.from || "/dashboard";
-      nav(to, { replace: true });
+      // Immer durchs Gate routen – das entscheidet anhand der Rolle
+      nav("/dashboard", { replace: true });
     } catch (e: any) {
       setError(e?.response?.data?.message || "Login fehlgeschlagen");
     }
