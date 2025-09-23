@@ -1,15 +1,15 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../store/auth";
-import Dashboard from "../pages/Dashboard"; // dein altes, generisches Dashboard
+import Dashboard from "../pages/Dashboard";
 
 export default function DashboardGate() {
   const { user } = useAuth();
+  const role = String(user?.role || "").toLowerCase();
 
-  // Creator sehen das neue Dashboard
-  if (user?.role === "creator") {
-    return <Navigate to="/creator" replace />;
-  }
+  if (role === "admin")   return <Navigate to="/admin" replace />;
+  if (role === "creator") return <Navigate to="/creator" replace />;
+  if (role === "buyer")   return <Navigate to="/buyer" replace />;
 
-  // alle anderen weiterhin das generische Dashboard
+  // Fallback: unbekannte Rolle → generisches Dashboard
   return <Dashboard />;
 }

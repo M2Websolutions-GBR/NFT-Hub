@@ -1,32 +1,28 @@
 import axios from "axios";
 import { useAuthState } from "../store/auth";
 
-const httpNft = axios.create({
-  baseURL: import.meta.env.VITE_API_NFT_URL || "http://localhost:3002",
+const httpAuth = axios.create({
+  baseURL: import.meta.env.VITE_API_AUTH_URL || "http://localhost:3001",
   timeout: 15000,
-  withCredentials: false, // 🚫 wichtig: keine Cookies für NFT-Service
 });
 
-// REQUEST LOG
-httpNft.interceptors.request.use((config) => {
+httpAuth.interceptors.request.use((config) => {
   const token = useAuthState.getState().token;
   if (token) config.headers.Authorization = `Bearer ${token}`;
   console.groupCollapsed(
-    `%c[NFT] ➜ ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`,
+    `%c[AUTH] ➜ ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`,
     "color:#0ea5e9"
   );
-  console.debug("withCredentials:", config.withCredentials); // 👈 sichtbar machen
   console.debug("params:", config.params);
   console.debug("data:", config.data);
   console.groupEnd();
   return config;
 });
 
-// RESPONSE LOG
-httpNft.interceptors.response.use(
+httpAuth.interceptors.response.use(
   (res) => {
     console.groupCollapsed(
-      `%c[NFT] ← ${res.status} ${res.config.method?.toUpperCase()} ${res.config.baseURL}${res.config.url}`,
+      `%c[AUTH] ← ${res.status} ${res.config.method?.toUpperCase()} ${res.config.baseURL}${res.config.url}`,
       "color:#22c55e"
     );
     console.debug("data:", res.data);
@@ -37,7 +33,7 @@ httpNft.interceptors.response.use(
     const cfg = err?.config || {};
     const status = err?.response?.status;
     console.groupCollapsed(
-      `%c[NFT] ✖ ${status ?? "ERR"} ${cfg.method?.toUpperCase?.() || ""} ${cfg.baseURL || ""}${cfg.url || ""}`,
+      `%c[AUTH] ✖ ${status ?? "ERR"} ${cfg.method?.toUpperCase?.() || ""} ${cfg.baseURL || ""}${cfg.url || ""}`,
       "color:#ef4444"
     );
     console.debug("params:", cfg.params);
@@ -49,5 +45,4 @@ httpNft.interceptors.response.use(
   }
 );
 
-
-export default httpNft;
+export default httpAuth;

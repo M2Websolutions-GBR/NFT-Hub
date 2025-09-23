@@ -6,6 +6,6 @@ const router = express.Router();
 
 router.post('/create-checkout-session', verifyToken, createCheckoutSession);
 router.post('/create-subscription-session', verifyToken, isCreator, createSubscriptionCheckout);
-
+// router.get('/orders/session/:sessionId',verifyToken, getOrderBySession);
 
 export default router;

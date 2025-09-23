@@ -1,40 +1,55 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import http from "../api/http";
+import httpAuth from "../api/httpAuth";
 import { getAvatarSign, uploadToCloudinary } from "../lib/avatar";
 
-
 type Role = "admin" | "creator" | "buyer" | string;
-type Patch = { username?: string; profileInfo?: string; avatarUrl?: string };
 
-
+type Patch = {
+  username?: string;
+  profileInfo?: string;
+  avatarUrl?: string;
+};
 
 export type User = {
   id: string;
+  _id: string;
   email: string;
   username?: string;
   role?: Role;
   isSubscribed?: boolean;
   profileInfo?: string;
+  avatarUrl?: string;
+  subscriptionExpires: string | null; // ISO-Datum
+  isSuspended: boolean;
+  suspensionUntil: string | null;
+  suspensionReason?: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type State = {
   token: string | null;
   user: User | null;
+
   setAuth: (t: string, u?: User) => void;
   fetchMe: () => Promise<User | null>;
+
   login: (email: string, password: string) => Promise<void>;
   register: (
     email: string,
     password: string,
     username: string,
     role?: Role,
-    profileInfo?: string
-  ) => Promise<void>; // 👈 jetzt konsistent zur Implementierung
-  updateProfile: (patch: Patch) => Promise<void>; // neu
+    profileInfo?: string,
+    avatarUrl?: string
+  ) => Promise<void>;
+
+  updateProfile: (patch: Patch) => Promise<void>;
+  updateAvatar: (file: File) => Promise<void>;
+
   logout: () => void;
 };
-
 
 export const useAuthState = create<State>()(
   persist(
@@ -46,7 +61,7 @@ export const useAuthState = create<State>()(
 
       fetchMe: async () => {
         try {
-          const { data } = await http.get("http://localhost:3001/api/auth/me");
+          const { data } = await httpAuth.get("/api/auth/me");
           set({ user: data });
           return data;
         } catch {
@@ -56,7 +71,7 @@ export const useAuthState = create<State>()(
       },
 
       login: async (email, password) => {
-        const { data } = await http.post("http://localhost:3001/api/auth/login", { email, password });
+        const { data } = await httpAuth.post("/api/auth/login", { email, password });
         set({ token: data.token });
         await get().fetchMe();
       },
@@ -66,26 +81,29 @@ export const useAuthState = create<State>()(
         password: string,
         username: string,
         role: Role = "buyer",
-        profileInfo?: string
+        profileInfo?: string,
+        avatarUrl?: string
       ) => {
         const payload: Record<string, unknown> = { email, password, username, role };
         if (profileInfo?.trim()) payload.profileInfo = profileInfo.trim();
+        if (avatarUrl?.trim()) payload.avatarUrl = avatarUrl.trim();
 
-        const { data } = await http.post("http://localhost:3001/api/auth/register", payload);
+        const { data } = await httpAuth.post("/api/auth/register", payload);
         set({ token: data.token });
         await get().fetchMe();
       },
-      updateProfile: async (patch: Patch) => {
-  const { data } = await http.patch("http://localhost:3010/me", patch);
-  const prev = get().user || null;
-  set({ user: { ...(prev || {} as User), ...data } });
-},
 
-updateAvatar: async (file: File) => {
-  const sig = await getAvatarSign("profile");        // Unterordner avatars/<uid>/profile
-  const up  = await uploadToCloudinary(file, sig);   // liefert secure_url
-  await get().updateProfile({ avatarUrl: up.secure_url });
-},
+      updateProfile: async (patch: Patch) => {
+        const { data } = await httpAuth.patch("api/auth/me", patch);
+        const prev = get().user || ({} as User);
+        set({ user: { ...prev, ...data } });
+      },
+
+      updateAvatar: async (file: File) => {
+        const sig = await getAvatarSign("profile");       // Unterordner avatars/<uid>/profile
+        const up = await uploadToCloudinary(file, sig);   // liefert secure_url
+        await get().updateProfile({ avatarUrl: up.secure_url });
+      },
 
       logout: () => set({ token: null, user: null }),
     }),
