@@ -35,19 +35,32 @@ export default function Landing() {
                 <p className="text-gray-600 mb-8">
                     Entdecke verfügbare Drops und sammle einzigartige Werke.
                 </p>
-                <div className="flex justify-center gap-4">
+                <div className="flex flex-wrap justify-center gap-4">
+                    {/* Normaler Register-Button (buyer default) */}
                     <Link
                         to="/register"
                         className="px-6 py-3 rounded-md bg-black text-white hover:opacity-90"
                     >
                         Jetzt registrieren
                     </Link>
+
+                    {/* Neuer: Als Creator registrieren -> gleiche Seite mit Flag */}
+                    <Link
+                        to={{ pathname: "/register", search: "?role=creator" }}
+                        className="px-6 py-3 rounded-md border hover:bg-gray-50"
+                        aria-label="Als Creator registrieren"
+                    >
+                        Als Creator registrieren
+                    </Link>
+
+                    {/* Bestehender Marktplatz-Link bleibt */}
                     <Link
                         to="/market"
                         className="px-6 py-3 rounded-md border hover:bg-gray-50"
                     >
                         Zum Marktplatz
                     </Link>
+
                 </div>
             </section>
 
