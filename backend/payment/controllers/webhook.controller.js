@@ -4,6 +4,7 @@ import Order from '../models/order.model.js';
 import dotenv from 'dotenv';
 import { createCertificatePDF } from '../utils/generateCertificatePDF.js';
 import { sendCertificateEmail } from '../utils/email.js';
+import { AUTH_URL, NFT_URL } from '../config/serviceURLs.js';
 
 dotenv.config();
 
@@ -131,7 +132,7 @@ export const webhookHandler = async (req, res) => {
           // NFT soldCount++ (Soft-Fail, blockiert den Webhook nicht)
           if (nftId) {
             try {
-              await http.patch(`http://nft-service:3002/api/nft/sold/${nftId}`);
+              await http.patch(`${NFT_URL}/api/nft/sold/${nftId}`);
               log(`NFT ${nftId} soldCount++`);
             } catch (e) {
               warn('nft sold++ failed:', e?.response?.status, e?.response?.data || e.message);
@@ -142,7 +143,7 @@ export const webhookHandler = async (req, res) => {
           let username = 'Buyer', email = null;
           if (buyerId) {
             try {
-              const userResponse = await http.get(`http://server-auth:3001/api/auth/user/${buyerId}`);
+              const userResponse = await http.get(`${AUTH_URL}/api/auth/user/${buyerId}`);
               username = userResponse.data?.username || userResponse.data?.email || 'Buyer';
               email = userResponse.data?.email;
               log('buyer loaded:', { buyerId, username, email });
@@ -187,7 +188,7 @@ export const webhookHandler = async (req, res) => {
               const newExpiration = new Date();
               newExpiration.setDate(newExpiration.getDate() + 30);
 
-              await http.patch(`http://server-auth:3001/api/auth/renew-subscription/${userId}`, {
+              await http.patch(`${AUTH_URL}/api/auth/renew-subscription/${userId}`, {
                 subscriptionExpires: newExpiration,
               });
 

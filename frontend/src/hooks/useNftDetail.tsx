@@ -1,6 +1,7 @@
 // src/hooks/useNftDetail.ts
 import { useQuery } from "@tanstack/react-query";
-import http from "../api/http";
+// import http from "../api/http";
+import httpNft from "../api/httpnft";
 
 type Nft = {
   _id: string;
@@ -30,8 +31,8 @@ export function useNftDetail(id?: string) {
     queryKey: ["nft-detail", id],
     enabled: !!id,
     queryFn: async () => {
-      const { data } = await http.get<NftDetailResponse>(
-        `http://localhost:3002/api/nft/${id}`
+      const { data } = await httpNft.get<NftDetailResponse>(
+        `/api/nft/${id}`
       );
       console.log("[useNftDetail] Response:", data);
       return data;

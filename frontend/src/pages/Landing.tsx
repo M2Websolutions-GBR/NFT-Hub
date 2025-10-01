@@ -3,28 +3,34 @@ import { useQuery } from "@tanstack/react-query";
 // import http from "../api/http";
 import httpNft from "../api/httpnft";
 
-type NFT = {
-    _id: string;
-    title: string;
-    price: number;           // in € (falls Cents -> unten anpassen)
-    imageUrl: string;
-    isSoldOut: boolean;
-    editionCount: number;
-    editionLimit: number;
-};
+// type NFT = {
+//     _id: string;
+//     title: string;
+//     price: number;           // in € (falls Cents -> unten anpassen)
+//     imageUrl: string;
+//     isSoldOut: boolean;
+//     editionCount: number;
+//     editionLimit: number;
+// };
 
 export default function Landing() {
     const { data, isLoading, isError } = useQuery({
         queryKey: ["nfts", "landing"],
-        queryFn: async () =>
-            (await httpNft.get<NFT[]>("/api/nft", {
-                params: { onlyAvailable: true, limit: 6 },
-            })).data,
+        queryFn: async () => {
+            const res = await httpNft.get("/nft", { params: { onlyAvailable: true, limit: 6 } });
+            const raw = res.data;
+            // auf Array normalisieren: [] | {items:[]} | {data:[]}
+            if (Array.isArray(raw)) return raw;
+            if (Array.isArray(raw?.items)) return raw.items;
+            if (Array.isArray(raw?.data)) return raw.data;
+            return []; // Fallback
+        },
     });
 
     // Serverseitig gefiltert (onlyAvailable=true). Fallback: clientseitig absichern.
-    const featured = (data ?? [])
-        .filter((n) => !n.isSoldOut && n.editionCount < n.editionLimit)
+    const list = Array.isArray(data) ? data : [];
+    const featured = list
+        .filter((n) => !n.isSoldOut && (n.editionCount ?? 0) < (n.editionLimit ?? 0))
         .slice(0, 6);
 
     return (

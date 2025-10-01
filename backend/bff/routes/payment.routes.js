@@ -5,8 +5,6 @@ import { verifyToken } from "../middleware/auth.middleware.js";
 
 const router = Router();
 
-
-
 async function forwardOrderBySession(req, res) {
   const { sessionId } = req.params;
   console.log("[payment.routes] GET order-by-session", sessionId);

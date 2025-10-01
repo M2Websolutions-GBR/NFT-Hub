@@ -15,6 +15,11 @@ dotenv.config();
 
 const app = express();
 
+// Health endpoint für Docker/NGINX Checks
+app.get('/health', (req, res) => {
+  res.status(200).send('OK - payment');
+});
+
 // DEBUG-INSTRUMENTATION (nur kurzfristig aktiv lassen!)
 function isPlainPath(x) {
   return typeof x === 'string';
