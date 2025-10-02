@@ -93,7 +93,7 @@ DBconnection();
 // Nur für Webhook-Rohdaten (kommt **vor** express.json())
 // app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), );
 
-app.use(webhookroutes);
+app.use('/api/payment', webhookroutes);
 app.use(express.json()); // wichtig für req.body
 app.use('/api/payment', paymentRoutes); // hier wird der Pfad richtig registriert
 app.use('/api', ownershipRoutes);
