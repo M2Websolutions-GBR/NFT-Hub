@@ -192,7 +192,7 @@ export default function NftDetails() {
   const { data: creatorHydrated } = useQuery({
     enabled: !!nft?.creatorId && !creatorFromDetail?.avatarUrl,
     queryKey: ["creator-hydrate", nft?.creatorId],
-    queryFn: async () => (await httpAuth.get(`/api/auth/user/${nft!.creatorId}`)).data,
+    queryFn: async () => (await httpAuth.get(`/user/${nft!.creatorId}`)).data,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -242,7 +242,7 @@ export default function NftDetails() {
       // Passe den Pfad an DEINE Backend-Route an:
       // Wenn dein Backend /api/payment/create-checkout-session nutzt, dann:
       // const CHECKOUT_PATH = "/api/payment/create-checkout-session";
-      const CHECKOUT_PATH = "/api/payment/create-checkout-session";
+      const CHECKOUT_PATH = "/create-checkout-session";
 
       const payload = {
         title: nft.title,

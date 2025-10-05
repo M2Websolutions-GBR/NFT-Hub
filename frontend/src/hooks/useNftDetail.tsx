@@ -32,7 +32,7 @@ export function useNftDetail(id?: string) {
     enabled: !!id,
     queryFn: async () => {
       const { data } = await httpNft.get<NftDetailResponse>(
-        `/api/nft/${id}`
+        `/${id}`
       );
       console.log("[useNftDetail] Response:", data);
       return data;
