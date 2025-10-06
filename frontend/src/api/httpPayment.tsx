@@ -2,81 +2,80 @@
 import axios, { AxiosError } from "axios";
 import { useAuthState } from "../store/auth";
 
-// Basis-URL: direkt zum Payment-Service ODER über den BFF.
-// Setze in .env: VITE_PAYMENT_API="http://localhost:3003/api"
-// Fallback: VITE_BFF_API="http://localhost:3010/api"
-// const BASE_URL =
-//   import.meta.env.VITE_API_PAYMENT_URL ||
-//   (import.meta.env.VITE_API_BFF_URL
-//     ? `${import.meta.env.VITE_API_BFF_URL}` // z.B. "/api/payment" vom BFF bereits im Pfad kapseln
-//     : "/api");
+const API_BASE = (import.meta.env.VITE_API_BASE || "/api").replace(/\/+$/, "");
 
-const httpPayment = axios.create({
-  baseURL: import.meta.env.VITE_API_PAYMENT_URL,
-  withCredentials: false,
-  // timeout optional, Stripe-Calls/Weiterleitungen sind schnell genug:
+// ---- Clients ----
+const paymentHttp = axios.create({
+  baseURL: `${API_BASE}/payment`,     // -> /api/payment
+  withCredentials: true,              // falls ihr Cookies/CSRF nutzt
   timeout: 15000,
+  headers: { Accept: "application/json" },
 });
 
-// Request-Interceptor: Auth + Logging
-httpPayment.interceptors.request.use((config) => {
-  const token = useAuthState.getState().token;
-  if (token) {
+const ordersHttp = axios.create({
+  baseURL: `${API_BASE}/payment/orders`,      // -> /api/orders
+  withCredentials: true,
+  timeout: 15000,
+  headers: { Accept: "application/json" },
+});
+
+// ---- Interceptors (Auth + Logging) ----
+function attachInterceptors(inst: typeof paymentHttp, tag: string) {
+  inst.interceptors.request.use((config) => {
+    const token = useAuthState.getState().token;
     config.headers = config.headers ?? {};
-    (config.headers as any).Authorization = `Bearer ${token}`;
-  }
+    if (token) (config.headers as any).Authorization = `Bearer ${token}`;
 
-  // Konsolen-Logging (deaktivierbar, wenn zu laut)
-  const p = config.params ? ` params: ${JSON.stringify(config.params)}` : "";
-  // kleine, sichere Preview vom Body (ohne Files)
-  let bodyPreview = "";
-  if (config.data && !(config.data instanceof FormData)) {
-    try {
-      bodyPreview = ` body: ${JSON.stringify(config.data)}`;
-    } catch {
-      bodyPreview = " body: [unserializable]";
+    // Logging
+    const path = String(config.url || "");
+    const url = `${config.baseURL}${path.startsWith("/") ? "" : "/"}${path}`;
+    const p = config.params ? ` params:${JSON.stringify(config.params)}` : "";
+    let body = "";
+    if (config.data && !(config.data instanceof FormData)) {
+      try { body = ` body:${JSON.stringify(config.data)}`; } catch { body = " body:[unserializable]"; }
     }
-  }
-  console.log(`[httpPay→] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}${p}${bodyPreview}`);
-  return config;
-});
+    console.log(`[%c${tag}%c→] ${String(config.method || "get").toUpperCase()} ${url}${p}${body}`, "color:#0ea5e9", "color:inherit");
+    return config;
+  });
 
-// Response-Interceptor: Logging + einfache Fehlerbehandlung
-httpPayment.interceptors.response.use(
-  (res) => {
-    console.log(`[httpPay←] ${res.status} ${res.config.url}`);
-    return res;
-  },
-  (error: AxiosError<any>) => {
-    const status = error.response?.status;
-    const url = error.config?.url;
-    const data = error.response?.data;
-    console.error(`[httpPay×] ${status} ${url}`, data || error.message);
+  inst.interceptors.response.use(
+    (res) => {
+      const path = String(res.config.url || "");
+      const url = `${res.config.baseURL}${path.startsWith("/") ? "" : "/"}${path}`;
+      console.log(`[%c${tag}%c←] ${res.status} ${url}`, "color:#22c55e", "color:inherit");
+      return res;
+    },
+    (error: AxiosError<any>) => {
+      const cfg: any = error.config || {};
+      const path = String(cfg.url || "");
+      const url = `${cfg.baseURL || ""}${path.startsWith("/") ? "" : "/"}${path}`;
+      const status = error.response?.status ?? "ERR";
+      console.error(`[%c${tag}%c×] ${status} ${url}`, "color:#ef4444", "color:inherit", error.response?.data || error.message);
+      return Promise.reject(error);
+    }
+  );
+}
 
-    // Optional: bei 401/403 → Logout/Redirect (hier nur Beispiel)
-    // if (status === 401 || status === 403) {
-    //   useAuthState.getState().logout?.();
-    //   window.location.href = "/login";
-    // }
+attachInterceptors(paymentHttp, "Pay");
+attachInterceptors(ordersHttp, "Orders");
 
-    return Promise.reject(error);
-  }
-);
+// ---- API-Funktionen ----
 
+// Stripe Checkout (Creator-Abo)
 export async function createCreatorCheckoutSession() {
-  const res = await httpPayment.post<{ url: string }>(
-    "/api/payment/create-subscription-session"
-  );
-  return res.data;
+  // ergibt: POST /api/payment/create-subscription-session
+  const { data } = await paymentHttp.post<{ url: string }>("/create-subscription-session");
+  return data;
 }
 
-// Stripe Portal (Abo verwalten/kündigen)
+// Stripe Customer Portal (Abo verwalten/kündigen)
 export async function createCreatorPortalSession() {
-  const res = await httpPayment.post<{ url: string }>(
-    "/creator/portal-session"
-  );
-  return res.data;
+  // ergibt: POST /api/payment/creator/portal-session
+  const { data } = await paymentHttp.post<{ url: string }>("/creator/portal-session");
+  return data;
 }
+
+// Orders
 export type Order = {
   _id: string;
   nftId: string;
@@ -86,8 +85,9 @@ export type Order = {
 };
 
 export async function getMyOrders() {
-  const { data } = await httpPayment.get<Order[]>("/api/orders/mine");
+  // ergibt: GET /api/orders/mine
+  const { data } = await ordersHttp.get<Order[]>("/mine");
   return data;
 }
 
-export default httpPayment;
+export default paymentHttp;
