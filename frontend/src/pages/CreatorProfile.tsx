@@ -65,7 +65,7 @@ export default function CreatorProfile() {
     queryKey: ["creator-profile", creatorId],
     queryFn: async (): Promise<ProfileData> => {
       const [creatorRes, nftsRes] = await Promise.all([
-        httpAuth.get<Creator>(`/api/auth/user/${creatorId}`),
+        httpAuth.get<Creator>(`/user/${creatorId}`),
         httpNft.get<NFT[]>(`/`, { params: { creatorId } }),
       ]);
       const nftsRaw = nftsRes.data ?? [];

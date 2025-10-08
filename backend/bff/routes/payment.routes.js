@@ -10,7 +10,7 @@ async function forwardOrderBySession(req, res) {
   console.log("[payment.routes] GET order-by-session", sessionId);
 
   try {
-    const upstream = `${PAYMENT_URL}/api/orders/session/${encodeURIComponent(sessionId)}`;
+    const upstream = `${PAYMENT_URL}/api/payment/orders/session/${encodeURIComponent(sessionId)}`;
     const r = await axios.get(upstream, {
       timeout: 8000,
       headers: {
@@ -41,6 +41,6 @@ async function forwardOrderBySession(req, res) {
 router.get("/api/payment/checkout/order-by-session/:sessionId", verifyToken, forwardOrderBySession);
 
 // ✅ Alias für deinen aktuellen Frontend-Call
-router.get("/api/orders/checkout/order-by-session/:sessionId", verifyToken, forwardOrderBySession);
+router.get("/api/checkout/order-by-session/:sessionId", verifyToken, forwardOrderBySession);
 
 export default router;

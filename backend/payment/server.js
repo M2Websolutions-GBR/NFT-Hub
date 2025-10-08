@@ -97,7 +97,7 @@ app.use('/api/payment', webhookroutes);
 app.use(express.json()); // wichtig für req.body
 app.use('/api/payment', paymentRoutes); // hier wird der Pfad richtig registriert
 app.use('/api', ownershipRoutes);
-app.use('/api', orderRoutes);
+app.use('/api/payment', orderRoutes);
 
 
 app.listen(PORT, () => {
