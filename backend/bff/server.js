@@ -10,8 +10,6 @@ import adminRoutes from "./routes/admin.routes.js";
 import PublicRoutes from "./routes/payment.routes.js";
 import CreatorRoutes from "./routes/creator.routes.js";
 
-// wichtig wieder entfernen
-import listEndpoints from "express-list-endpoints";
 
 // .env wie von euch angegeben
 dotenv.config({ path: "./config/.env" });
@@ -69,17 +67,7 @@ app.use('/api/admin', adminRoutes);
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
-import listEndpoints from "express-list-endpoints";
 
-app.get("/__routes", (_req, res) => res.json(listEndpoints(app)));
-// Optional: registrierte Endpoints listen (nur für Debug; nicht in Prod offen lassen)
-try {
-  // Nur laden, wenn verfügbar – verhindert Crash ohne Dependency
-  const { default: listEndpoints } = await import("express-list-endpoints").catch(() => ({ default: null }));
-  if (listEndpoints) {
-    app.get("/__routes", (_req, res) => res.json(listEndpoints(app)));
-  }
-} catch { /* noop */ }
 
 // Start
 const PORT = process.env.PORT || 3010;
