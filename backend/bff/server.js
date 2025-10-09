@@ -2,18 +2,23 @@ import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
-// import routes from './routes/index.js';
+
+// eure bestehenden Router-Imports (NICHT geändert)
 import meRoutes from "./routes/me.routes.js";
 import nftRoutes from "./routes/nft.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
-import PublicRoutes from "./routes/payment.routes.js"
-import CreatorRoutes from "./routes/creator.routes.js"
+import PublicRoutes from "./routes/payment.routes.js";
+import CreatorRoutes from "./routes/creator.routes.js";
 
-dotenv.config();
+// wichtig wieder entfernen
+import listEndpoints from "express-list-endpoints";
+
+// .env wie von euch angegeben
+dotenv.config({ path: "./config/.env" });
 
 const app = express();
 
-// Eine oder mehrere erlaubte Origins aus ENV (Komma-getrennt), sonst Vite-Dev:
+// CORS wie gehabt
 const ALLOWED = (process.env.FRONTEND_URL || 'http://localhost:5173')
   .split(',')
   .map(s => s.trim())
@@ -33,7 +38,7 @@ const corsOptions = {
       const norm = new URL(origin).origin;
       if (ALLOWED.includes(norm)) return cb(null, true);
 
-      // Dev-Wildcard: localhost/127.0.0.1 (falls du das nicht willst, Zeile entfernen)
+      // Dev-Wildcard: localhost/127.0.0.1
       if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(norm)) return cb(null, true);
 
       console.warn('[CORS BLOCKED]', { origin, ALLOWED });
@@ -47,31 +52,35 @@ const corsOptions = {
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   exposedHeaders: ['x-request-id'],
 };
+
 app.use(cors(corsOptions));
-// app.options("*", cors(corsOptions));
 
-
-// (optional für Cookies hinter Proxy)
+// Proxy-Setup & Basics
 app.set("trust proxy", 1);
-
-// danach erst JSON & deine Routen
 app.use(express.json());
-// app.use("/api", routes);
-
 app.use(morgan('dev'));
+
+// ⚠️ WICHTIG: Alles konsistent unter /api mounten, Reihenfolge bewusst
 app.use('/api', meRoutes);
-app.use(nftRoutes);
+app.use('/api', nftRoutes);
 app.use('/api', CreatorRoutes);
+app.use('/api', PublicRoutes);
+app.use('/api/admin', adminRoutes);
 
+app.get("/health", (_req, res) => res.json({ ok: true }));
 
-app.get('/health', (_req, res) => res.json({ ok: true }));
+import listEndpoints from "express-list-endpoints";
 
-app.use(PublicRoutes);       // WICHTIG: Router mounten!
-app.use("/api/admin", adminRoutes);
+app.get("/__routes", (_req, res) => res.json(listEndpoints(app)));
+// Optional: registrierte Endpoints listen (nur für Debug; nicht in Prod offen lassen)
+try {
+  // Nur laden, wenn verfügbar – verhindert Crash ohne Dependency
+  const { default: listEndpoints } = await import("express-list-endpoints").catch(() => ({ default: null }));
+  if (listEndpoints) {
+    app.get("/__routes", (_req, res) => res.json(listEndpoints(app)));
+  }
+} catch { /* noop */ }
 
-
-
-// app.use('/', routes);
-
+// Start
 const PORT = process.env.PORT || 3010;
 app.listen(3010, "0.0.0.0", () => console.log("BFF on :3010"));

@@ -17,7 +17,7 @@ export const listCreatorOrders = async (req, res) => {
   const q      = String(req.query.q     ?? "");
 
   // ✅ korrigierter Upstream-Pfad (falls eure API so heißt):
-  const paymentUrl = `${PAYMENT_BASE_URL}/api/orders/mine/creator`;
+  const paymentUrl = `${PAYMENT_BASE_URL}/api/payment/mine/creator`;
   // Falls eure Payment-API stattdessen /api/orders/creator nutzt, nimm:
   // const paymentUrl = `${PAYMENT_BASE_URL}/api/orders/creator`;
 

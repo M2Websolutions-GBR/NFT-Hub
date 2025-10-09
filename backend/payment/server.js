@@ -11,7 +11,8 @@ import orderRoutes from './routes/order.routes.js';
 import webhookroutes from './routes/webhook.routes.js';
 
 
-dotenv.config();
+dotenv.config({path:"./config/.env"});
+
 
 const app = express();
 

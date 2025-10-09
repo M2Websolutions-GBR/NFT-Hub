@@ -38,9 +38,9 @@ async function forwardOrderBySession(req, res) {
 }
 
 // ✅ „neuer“ Pfad (empfohlen)
-router.get("/api/payment/checkout/order-by-session/:sessionId", verifyToken, forwardOrderBySession);
+router.get("/payment/checkout/order-by-session/:sessionId", verifyToken, forwardOrderBySession);
 
 // ✅ Alias für deinen aktuellen Frontend-Call
-router.get("/api/checkout/order-by-session/:sessionId", verifyToken, forwardOrderBySession);
+router.get("/checkout/order-by-session/:sessionId", verifyToken, forwardOrderBySession);
 
 export default router;
