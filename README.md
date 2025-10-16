@@ -172,10 +172,9 @@ SSL-Zertifikate werden mit **Certbot / Let's Encrypt** erstellt.
 
 **Testkarte (Visa):**
 
-4242 4242 4242 4242
-CVC: 424
-Expiry: beliebig in Zukunft
-ZIP: 42424
+- 4242 4242 4242 4242
+- CVC: 424
+- Expiry: beliebig in Zukunft
 
 → Reine Testumgebung, keine echten Zahlungen.
 
