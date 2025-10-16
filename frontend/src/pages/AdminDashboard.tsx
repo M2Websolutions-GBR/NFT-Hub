@@ -122,8 +122,8 @@ export function NftAdminTable({ query }: { query: string }) {
   const { data, isLoading, isError, error } = useQuery<NftsResponse, Error>({
     queryKey: ["admin-nft", query],
     queryFn: async () => {
-      const res = await http.get("/api/admin/nft", { params: { query } }); // plural
-      console.log("[AdminDashboard] /api/admin/nft raw:", res.data, typeof res.data);
+      const res = await http.get("/admin/nft", { params: { query } }); // plural
+      console.log("[AdminDashboard] /admin/nft raw:", res.data, typeof res.data);
       return res.data as NftsResponse;
     },
     retry: 1,
@@ -146,7 +146,7 @@ export function NftAdminTable({ query }: { query: string }) {
 
   const block = useMutation({
     mutationFn: async (vars: { id: string; reason: string }) =>
-      http.patch(`/api/admin/nft/${vars.id}/block`, { reason: vars.reason }),
+      http.patch(`/admin/nft/${vars.id}/block`, { reason: vars.reason }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-nft"] }),
     onError: (e: unknown) => {
       const anyErr = e as any;
@@ -155,7 +155,7 @@ export function NftAdminTable({ query }: { query: string }) {
   });
 
   const unblock = useMutation({
-    mutationFn: async (id: string) => http.patch(`/api/admin/nft/${id}/unblock`, {}),
+    mutationFn: async (id: string) => http.patch(`/admin/nft/${id}/unblock`, {}),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-nft"] }),
     onError: (e: unknown) => {
       const anyErr = e as any;
@@ -273,12 +273,12 @@ function UserAdminTable({ query }: { query: string }) {
   const qc = useQueryClient();
   const { data, isLoading, isError } = useQuery({
     queryKey: ["admin-user", query],
-    queryFn: async () => (await http.get<User[]>("/api/admin/user", { params: { query } })).data,
+    queryFn: async () => (await http.get<User[]>("/admin/user", { params: { query } })).data,
   });
 
   const suspend = useMutation({
     mutationFn: async (vars: { id: string; reason: string; until?: string }) =>
-      http.patch(`/api/admin/user/${vars.id}/suspend`, {
+      http.patch(`/admin/user/${vars.id}/suspend`, {
         suspended: true,
         reason: vars.reason,
         until: vars.until,
@@ -287,7 +287,7 @@ function UserAdminTable({ query }: { query: string }) {
   });
 
   const unsuspend = useMutation({
-    mutationFn: async (id: string) => http.patch(`/api/admin/user/${id}/unsuspend`, {}),
+    mutationFn: async (id: string) => http.patch(`/admin/user/${id}/unsuspend`, {}),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-user"] }),
   });
 
@@ -375,18 +375,18 @@ function OrderAdminTable({ query }: { query: string }) {
   const qc = useQueryClient();
   const { data, isLoading, isError } = useQuery({
     queryKey: ["admin-orders", query],
-    queryFn: async () => (await http.get<Order[]>("/api/admin/orders", { params: { query } })).data,
+    queryFn: async () => (await http.get<Order[]>("/admin/orders", { params: { query } })).data,
   });
 
   const refund = useMutation({
     mutationFn: async (vars: { id: string; reason?: string }) =>
-      http.post(`/api/admin/orders/${vars.id}/refund`, { reason: vars.reason }),
+      http.post(`/admin/orders/${vars.id}/refund`, { reason: vars.reason }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-orders"] }),
   });
 
   const voidOrder = useMutation({
     mutationFn: async (vars: { id: string; reason?: string }) =>
-      http.post(`/api/admin/orders/${vars.id}/void`, { reason: vars.reason }),
+      http.post(`/admin/orders/${vars.id}/void`, { reason: vars.reason }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-orders"] }),
   });
 

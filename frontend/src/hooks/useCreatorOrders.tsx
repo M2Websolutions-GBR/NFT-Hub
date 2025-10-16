@@ -12,7 +12,7 @@ export function useCreatorOrders({ status = 'paid', page = 1, limit = 20, q = ''
   return useQuery<OrdersResponse>({
     queryKey: ['creator-orders', { status, page, limit, q }],
     queryFn: async () => {
-      const { data } = await http.get<OrdersResponse>('/api/creator/orders', {
+      const { data } = await http.get<OrdersResponse>('/creator/orders', {
         params: { status, page, limit, q },
       });
       return data;

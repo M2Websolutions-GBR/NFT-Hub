@@ -18,7 +18,7 @@ export default function Market() {
     const { data, isLoading, isError } = useQuery({
         queryKey: ["nfts"],
         queryFn: async () =>
-            (await httpNft.get<NFT[]>("/api/nft")).data,
+            (await httpNft.get<NFT[]>("/")).data,
     });
 
     if (isLoading) return <div>lade NFTs…</div>;

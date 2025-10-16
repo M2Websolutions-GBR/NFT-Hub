@@ -11,9 +11,15 @@ import orderRoutes from './routes/order.routes.js';
 import webhookroutes from './routes/webhook.routes.js';
 
 
-dotenv.config();
+dotenv.config({path:"./config/.env"});
+
 
 const app = express();
+
+// Health endpoint für Docker/NGINX Checks
+app.get('/health', (req, res) => {
+  res.status(200).send('OK - payment');
+});
 
 // DEBUG-INSTRUMENTATION (nur kurzfristig aktiv lassen!)
 function isPlainPath(x) {
@@ -88,11 +94,11 @@ DBconnection();
 // Nur für Webhook-Rohdaten (kommt **vor** express.json())
 // app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), );
 
-app.use(webhookroutes);
+app.use('/api/payment', webhookroutes);
 app.use(express.json()); // wichtig für req.body
 app.use('/api/payment', paymentRoutes); // hier wird der Pfad richtig registriert
 app.use('/api', ownershipRoutes);
-app.use('/api', orderRoutes);
+app.use('/api/payment', orderRoutes);
 
 
 app.listen(PORT, () => {

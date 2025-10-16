@@ -10,7 +10,7 @@ export type NFT = {
 };
 
 export async function getNFTById(id: string) {
-  const { data } = await httpNft.get<NFT>(`/api/nft/${encodeURIComponent(id)}`);
+  const { data } = await httpNft.get<NFT>(`/${encodeURIComponent(id)}`);
   return data;
 }
 

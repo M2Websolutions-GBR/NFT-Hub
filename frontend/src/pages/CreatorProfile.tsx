@@ -48,7 +48,7 @@ export default function CreatorProfile() {
 
   const renameNft = useMutation({
     mutationFn: async (vars: { id: string; title: string }) => {
-      return httpNft.put(`/api/nft/${vars.id}`, { title: vars.title.trim() });
+      return httpNft.put(`/${vars.id}`, { title: vars.title.trim() });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["creator-profile", creatorId] });
@@ -65,8 +65,8 @@ export default function CreatorProfile() {
     queryKey: ["creator-profile", creatorId],
     queryFn: async (): Promise<ProfileData> => {
       const [creatorRes, nftsRes] = await Promise.all([
-        httpAuth.get<Creator>(`/api/auth/user/${creatorId}`),
-        httpNft.get<NFT[]>(`/api/nft/`, { params: { creatorId } }),
+        httpAuth.get<Creator>(`/user/${creatorId}`),
+        httpNft.get<NFT[]>(`/`, { params: { creatorId } }),
       ]);
       const nftsRaw = nftsRes.data ?? [];
       // Client-Fallback-Filter (falls Service creatorId-Filter ignoriert)

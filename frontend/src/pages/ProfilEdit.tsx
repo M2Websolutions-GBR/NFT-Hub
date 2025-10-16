@@ -1,10 +1,12 @@
 import { useForm } from "react-hook-form";
 import { useAuth } from "../store/auth";
 import { useState, useEffect } from "react";
+import http from "../api/http"; // <- zentraler Client (baseURL=/api)
 
 type FormValues = {
   username?: string;
   profileInfo?: string;
+  avatarUrl?: string;
 };
 
 type CloudSig = {
@@ -13,12 +15,18 @@ type CloudSig = {
   signature: string;
   api_key: string;
   cloud_name: string;
+  // optional: upload_preset?: string;
 };
 
 export default function ProfileEdit() {
-  const { user, updateProfile, fetchMe, token } = useAuth() as any; // falls token nicht im Hook selektiert ist
-  const { register, handleSubmit, reset, formState: { isSubmitting } } =
-    useForm<FormValues>({ defaultValues: { username: "", profileInfo: "" } });
+  const { user, updateProfile, fetchMe } = useAuth() as any;
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { isSubmitting },
+  } = useForm<FormValues>({ defaultValues: { username: "", profileInfo: "" } });
 
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -44,8 +52,7 @@ export default function ProfileEdit() {
       const patch: FormValues = {};
       if (typeof values.username === "string") patch.username = values.username.trim();
       if (typeof values.profileInfo === "string") patch.profileInfo = values.profileInfo.trim();
-
-      await updateProfile(patch as { username?: string; profileInfo?: string });
+      await updateProfile(patch);
       await fetchMe();
       setSaved(true);
     } catch (e: any) {
@@ -53,17 +60,18 @@ export default function ProfileEdit() {
     }
   };
 
-  // --- Avatar Upload Flow ---
+  // --- Avatar Upload Flow (fix: nutzt /api + http client) ---
   async function getAvatarSign(sub?: string): Promise<CloudSig> {
-    const qs = sub ? `?sub=${encodeURIComponent(sub)}` : "";
-    const res = await fetch(`http://localhost:3010/api/profile/avatar/sign${qs}`, {
-      method: "POST",
-      headers: {
-        "Authorization": token ? `Bearer ${token}` : "",
-      },
-    });
-    if (!res.ok) throw new Error("Konnte Signatur nicht holen");
-    return res.json();
+      const qs = sub ? `?sub=${encodeURIComponent(sub)}` : "";
+    // Wir rufen den Auth-Service über Nginx an:
+    // Nginx: /api/auth/ -> server-auth
+    // Route (Server): POST /api/auth/profile/avatar/sign
+    const { data } = await http.post<CloudSig>(
+      
+      `/profile/avatar/sign${qs}`,
+      sub ? { sub } : {}
+    );
+    return data;
   }
 
   async function uploadToCloudinary(file: File, sig: CloudSig) {
@@ -73,12 +81,17 @@ export default function ProfileEdit() {
     form.append("timestamp", String(sig.timestamp));
     form.append("folder", sig.folder);
     form.append("signature", sig.signature);
+    // Falls ihr signierte Uploads mit preset nutzt:
+    // if (sig.upload_preset) form.append("upload_preset", sig.upload_preset);
 
     const res = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloud_name}/image/upload`, {
       method: "POST",
       body: form,
     });
-    if (!res.ok) throw new Error("Upload zu Cloudinary fehlgeschlagen");
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`Cloudinary-Upload fehlgeschlagen${text ? `: ${text}` : ""}`);
+    }
     return res.json() as Promise<{ secure_url: string; public_id: string }>;
   }
 
@@ -88,14 +101,26 @@ export default function ProfileEdit() {
     setUploadMsg(null);
     setError(null);
     try {
-      const sig = await getAvatarSign("profile"); // landet in avatars/<userId>/profile
+      // Basic-Validierung
+      if (!/^image\//.test(file.type)) {
+        throw new Error("Bitte ein Bild auswählen (PNG/JPG/WebP).");
+      }
+      const maxMB = 8;
+      if (file.size > maxMB * 1024 * 1024) {
+        throw new Error(`Datei ist zu groß. Max. ${maxMB} MB.`);
+      }
+
+      // Signatur holen & Upload durchführen
+      const sig = await getAvatarSign("profile"); // Zielordner z. B. avatars/<userId>/profile
       const up = await uploadToCloudinary(file, sig);
+
+      // Profil updaten
       await updateProfile({ avatarUrl: up.secure_url });
       await fetchMe();
       setFile(null);
       setUploadMsg("Avatar aktualisiert.");
     } catch (e: any) {
-      setError(e?.message || "Avatar-Upload fehlgeschlagen");
+      setError(e?.response?.data?.message || e?.message || "Avatar-Upload fehlgeschlagen");
     } finally {
       setUploading(false);
     }

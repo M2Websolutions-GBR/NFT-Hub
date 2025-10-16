@@ -1,10 +1,13 @@
 // bff-service/src/controllers/creator.controller.js
 import axios from "axios";
 
-const PAYMENT_BASE_URL = process.env.PAYMENT_URL || "http://payment-service:3003";
-const AUTH_BASE_URL    = process.env.AUTH_URL    || "http://auth-service:3001";
+const pickBase = (v, fb) => (v || fb).split(",")[0].trim().replace(/\/+$/, "");
 
-// ⚠️ Auth-Routen sind bei dir singular: /api/user/:id
+// interne Container-URLs (ohne https, ohne Komma)
+const PAYMENT_BASE_URL = pickBase(process.env.PAYMENT_URL, "http://payment-service:3003");
+const AUTH_BASE_URL    = pickBase(process.env.AUTH_URL,    "http://server-auth:3001");
+
+// z.B. "/api/auth/user"  -> GET {AUTH_BASE_URL}/api/auth/user/:id
 const AUTH_SINGLE_PATH = process.env.AUTH_SINGLE_PATH || "/api/auth/user";
 
 export const listCreatorOrders = async (req, res) => {
@@ -13,14 +16,17 @@ export const listCreatorOrders = async (req, res) => {
   const page   = Number(req.query.page  ?? 1);
   const q      = String(req.query.q     ?? "");
 
-  const paymentUrl = `${PAYMENT_BASE_URL}/api/mine/creator`;
+  // ✅ korrigierter Upstream-Pfad (falls eure API so heißt):
+  const paymentUrl = `${PAYMENT_BASE_URL}/api/payment/mine/creator`;
+  // Falls eure Payment-API stattdessen /api/orders/creator nutzt, nimm:
+  // const paymentUrl = `${PAYMENT_BASE_URL}/api/orders/creator`;
 
   try {
     // 1) Orders vom Payment-Service holen
     const pr = await axios.get(paymentUrl, {
       params: { status, limit, page, q },
       headers: {
-        "x-user-id": req.user.id,
+        "x-user-id": req.user?.id,
         authorization: req.headers.authorization || "",
       },
       timeout: 10_000,
@@ -34,7 +40,7 @@ export const listCreatorOrders = async (req, res) => {
 
     const { items = [], total = 0, pages = 1 } = pr.data || {};
 
-    // 2) Käufer einzeln beim Auth-Service nachschlagen
+    // 2) Käufer beim Auth-Service nachschlagen
     const buyerIds = [...new Set(items.map(i => String(i.buyerId)).filter(Boolean))];
     const buyersById = {};
 
@@ -42,7 +48,6 @@ export const listCreatorOrders = async (req, res) => {
       const url = `${AUTH_BASE_URL}${AUTH_SINGLE_PATH}/${id}`;
       try {
         const ur = await axios.get(url, {
-          // bei dir ist /user/:id ungeschützt – Header schaden aber nicht
           headers: { authorization: req.headers.authorization || "" },
           timeout: 6000,
           validateStatus: () => true,
@@ -61,7 +66,7 @@ export const listCreatorOrders = async (req, res) => {
       }
     }
 
-    // 3) Items anreichern (Preis/Währung + Käuferdaten)
+    // 3) Items anreichern
     const enriched = items.map(i => {
       const uid = String(i.buyerId);
       const buyer = buyersById[uid] || {};
@@ -69,21 +74,16 @@ export const listCreatorOrders = async (req, res) => {
         id: String(i.id || i._id),
         nftId: String(i.nftId),
         buyerId: uid,
-
-        // amount muss in Cents aus Payment kommen
-        amount: (typeof i.amount === "number")
-  ? i.amount
-  : (typeof i.price === "number" ? i.price : 0),
+        amount:
+          typeof i.amount === "number"
+            ? i.amount
+            : (typeof i.price === "number" ? i.price : 0),
         currency: (i.currency || "EUR").toUpperCase(),
-
         status: i.status,
         createdAt: i.createdAt,
         stripeSessionId: i.stripeSessionId,
-
         buyerName:  buyer.name  || null,
         buyerEmail: buyer.email || null,
-
-        // optional – falls schon vorhanden
         nftTitle: i.nftTitle || null,
         nftImage: i.nftImage || null,
       };
@@ -96,7 +96,7 @@ export const listCreatorOrders = async (req, res) => {
       "[BFF] /creator/orders error:",
       err?.code || err?.message || err,
       "→ paymentUrl:", paymentUrl,
-      "params:", { status, limit, page, q, creatorId: req.user.id }
+      "params:", { status, limit, page, q, creatorId: req.user?.id }
     );
     return res.status(500).json({ message: "Internal server error" });
   }

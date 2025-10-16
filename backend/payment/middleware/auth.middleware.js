@@ -17,7 +17,7 @@ export const verifyToken = async (req, res, next) => {
     let finalUser = baseUser;
    
     if (process.env.VERIFY_WITH_AUTH === 'true') {
-      const url = `${process.env.AUTH_SERVICE_URL || 'http://server-auth:3001'}/api/auth/me`;
+      const url = `${process.env.AUTH_URL || 'http://server-auth:3001'}/api/auth/me`;
       const { data } = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` },
         timeout: 5000,
