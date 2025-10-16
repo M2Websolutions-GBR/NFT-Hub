@@ -1,174 +1,139 @@
-🖼️ NFT-Hub
+# 🖼️ NFT-Hub
 
-NFT-Hub ist ein digitales Kunst-Marktplatz-Projekt, das bewusst ohne Blockchain-Abhängigkeit entwickelt wurde.
-Es dient zu Demonstrations- und Lernzwecken im Bereich moderner Webentwicklung mit Microservice-Architektur, Authentifizierung, Zahlungsabwicklung und Medienverwaltung.
+**NFT-Hub** ist ein digitales Kunst-Marktplatz-Projekt, das bewusst **ohne Blockchain-Abhängigkeit** entwickelt wurde.  
+Es dient zu Demonstrations- und Lernzwecken im Bereich moderner **Webentwicklung mit Microservice-Architektur**, Authentifizierung, Zahlungsabwicklung und Medienverwaltung.
 
-⚙️ Ziel: Ein funktionaler Marktplatz, auf dem Creators ihre Kunstwerke hochladen können und Buyers diese mit einer simulierten Stripe-Zahlung (Sandbox) erwerben können – inklusive digitalem Zertifikat.
+> ⚙️ **Ziel:** Ein funktionaler Marktplatz, auf dem **Creators** ihre Kunstwerke hochladen können und **Buyers** diese mit einer simulierten Stripe-Zahlung (Sandbox) erwerben können – inklusive digitalem Zertifikat.
 
-🌐 Plattform-Überblick
-Rolle	Berechtigung
-Buyer	Kann verfügbare Kunstwerke ansehen und mit einer Test-Zahlung kaufen
-Creator	Kann nur mit aktivem Abo (Stripe-Subscription) neue Werke hochladen
-Admin	Hat Zugriff auf Verwaltungsfunktionen (nicht öffentlich zugänglich, nur Demonstration)
-💡 Funktionsübersicht
+---
 
-Registrierung, Login & Rollenverwaltung
+## 🌐 Plattform-Überblick
 
-Upload und Verwaltung digitaler Kunstwerke
+| **Rolle** | **Berechtigung** |
+|------------|------------------|
+| **Buyer** | Kann verfügbare Kunstwerke ansehen und mit einer Test-Zahlung kaufen |
+| **Creator** | Kann nur mit aktivem Abo (Stripe-Subscription) neue Werke hochladen |
+| **Admin** | Zugriff auf Verwaltungsfunktionen (nur Demonstration) |
 
-Stripe-Zahlungen (One-time & Subscription im Sandbox-Modus)
+### 💡 Funktionsübersicht
 
-Cloudinary-Integration für Medien
+- Registrierung, Login & Rollenverwaltung  
+- Upload und Verwaltung digitaler Kunstwerke  
+- Stripe-Zahlungen (One-Time & Subscription im Sandbox-Modus)  
+- Cloudinary-Integration für Medien  
+- Automatische PDF-Zertifikatserstellung (pdfkit / Puppeteer)  
+- JWT-basierte Authentifizierung  
+- RESTful API mit Microservices  
+- Docker-basiertes Deployment mit Nginx-Reverse-Proxy  
+- Sichere Kommunikation über HTTPS (SSL)
 
-Automatische PDF-Zertifikatserstellung (pdfkit / Puppeteer)
+---
 
-JWT-basierte Authentifizierung
+## 🧩 Architektur & Setup
 
-RESTful API mit Microservices
+NFT-Hub folgt einem **Microservice-Ansatz**, um Skalierbarkeit und Wartbarkeit zu fördern.
 
-Docker-basiertes Deployment mit Nginx Reverse Proxy
+---
 
-Sichere Kommunikation über HTTPS (SSL)
+### 🧱 Microservices
 
-🧩 Architektur & Setup
-
-NFT-Hub folgt einem Microservice-Ansatz, um Skalierbarkeit und Wartbarkeit zu fördern.
-
-Services
-1️⃣ Auth-Service
+#### 1️⃣ Auth-Service
 
 Verantwortlich für Registrierung, Login, Token-Erstellung und Nutzerverwaltung.
 
-Technologien & Bibliotheken:
+**Technologien & Bibliotheken**
+- Node.js + Express  
+- MongoDB + Mongoose  
+- bcrypt (Password-Hashing)  
+- JSON Web Token (JWT)  
+- dotenv  
+- axios (Inter-Service Kommunikation)
 
-Node.js + Express
+**Hauptfunktionen**
+- `POST /register` → Nutzerregistrierung  
+- `POST /login` → JWT-Authentifizierung  
+- `GET /user/:id` → Profil (vom NFT-Service genutzt)  
+- Token-Middleware: prüft Gültigkeit & Rolle  
+- Rollenmodell: `user`, `creator`, `admin`
 
-MongoDB + Mongoose
+---
 
-bcrypt (Password Hashing)
+#### 2️⃣ NFT-Service
 
-JSON Web Token (JWT)
+Zuständig für Upload, Verwaltung und Anzeige von Kunstwerken.
 
-dotenv
+**Technologien & Bibliotheken**
+- Node.js + Express  
+- MongoDB + Mongoose  
+- multer (Dateiupload)  
+- cloudinary (Bildspeicherung)  
+- axios (Kommunikation mit Auth-Service)  
+- JWT-Middleware  
+- pdfkit / Puppeteer (Zertifikate)
 
-axios (zur Kommunikation mit anderen Services)
+**Routenübersicht**
+- **Public Routes**
+  - `GET /api/nft` → Alle NFTs  
+  - `GET /api/nft/creator/:creatorId` → NFTs eines Creators + Profil  
+- **Private Routes**
+  - `GET /api/nft/mine` → Eigene NFTs  
+  - `POST /api/nft/upload` → Nur Creator mit aktivem Abo
 
-Hauptfunktionen:
+---
 
-POST /register → Nutzerregistrierung
+#### 3️⃣ Payment-Service
 
-POST /login → JWT-Authentifizierung
+Verwaltet Stripe-Zahlungen und Abonnements.
 
-GET /user/:id → Nutzerprofil (wird vom NFT-Service verwendet)
+**Technologien & Bibliotheken**
+- Node.js + Express  
+- Stripe SDK (Sandbox)  
+- MongoDB + Mongoose  
+- dotenv  
+- axios  
+- Webhook-Handling für Stripe-Events  
+- node-cron (Automatische Abo-Prüfungen)
 
-Token-Middleware: prüft Gültigkeit & Rolle des Users
+**Hauptfunktionen**
+- Test-Checkout mit Visa-Karte  
+- Subscription-Handling (Start, Verlängerung, Ablauf)  
+- Automatische Abo-Statusprüfung  
+- Zertifikats-Trigger nach Kauf
 
-Rollenmodell: user, creator, admin
+---
 
-2️⃣ NFT-Service
+#### 4️⃣ BFF-Service (Backend-for-Frontend)
 
-Zuständig für das Hochladen, Verwalten und Abrufen der Kunstwerke.
+Gateway-Layer für das Frontend – bündelt API-Aufrufe von Auth-, NFT- und Payment-Service.
 
-Technologien & Bibliotheken:
+**Technologien**
+- Node.js + Express  
+- axios  
+- JWT-Validierung  
+- Vereinfachte Endpoints für das Frontend
 
-Node.js + Express
+---
 
-MongoDB + Mongoose
-
-multer (Dateiupload)
-
-cloudinary (Bildspeicherung)
-
-axios (Kommunikation mit Auth-Service)
-
-JWT-Middleware für Authentifizierung
-
-pdfkit / Puppeteer für Zertifikatserstellung
-
-Routenübersicht:
-
-Public Routes
-
-GET /api/nft → Alle NFTs
-
-GET /api/nft/creator/:creatorId → NFTs eines bestimmten Creators + Creator-Profil
-
-Private Routes
-
-GET /api/nft/mine → Eigene NFTs eines Creators
-
-POST /api/nft/upload → Nur für eingeloggte Creator mit aktivem Abo
-
-3️⃣ Payment-Service
-
-Zuständig für die komplette Zahlungs- und Aboverwaltung.
-
-Technologien & Bibliotheken:
-
-Node.js + Express
-
-Stripe SDK (Sandbox)
-
-MongoDB + Mongoose
-
-dotenv
-
-axios (zur Kommunikation mit Auth- & NFT-Service)
-
-Webhook-Handling für Stripe-Ereignisse
-
-cron / node-cron (für automatische Abo-Prüfungen & -Verlängerungen)
-
-Hauptfunktionen:
-
-Test-Checkout mit Kreditkarte (Visa 4242 4242 4242 4242, CVC 424)
-
-Subscription-Handling (Start, Verlängerung, Ablauf)
-
-Automatische Statusprüfung von Abos
-
-Zertifikats-Trigger nach erfolgreichem Kauf
-
-4️⃣ BFF-Service (Backend For Frontend)
-
-Optionaler Gateway-Service für das Frontend – bündelt API-Aufrufe aus Auth-, NFT- und Payment-Service.
-
-Technologien & Bibliotheken:
-
-Node.js + Express
-
-axios für Microservice-Kommunikation
-
-JWT-Validierung
-
-vereinfachte API-Endpunkte für das React-Frontend
-
-5️⃣ Frontend
+#### 5️⃣ Frontend
 
 Benutzeroberfläche für Buyers und Creators.
 
-Technologien & Tools:
+**Technologien**
+- React + Vite  
+- Tailwind CSS  
+- Axios  
+- Zustand oder Context API  
+- React Router DOM  
+- Stripe Elements / Checkout  
+- Modernes UI-Design mit Glassmorphism
 
-React + Vite
+---
 
-TypeScript (optional je nach Branch)
+## 🧱 Infrastruktur
 
-Tailwind CSS
+### ⚙️ Docker Setup
 
-Axios (API-Kommunikation)
-
-Zustand oder Context API für State Management
-
-React Router DOM für Routing
-
-Stripe Elements / Checkout für Zahlungen
-
-Animierte UI mit Glassmorphism und modernem Layout
-
-🧱 Infrastruktur
-Docker Setup
-
-Jeder Service läuft in einem separaten Container:
+Jeder Service läuft in einem eigenen Container:
 
 auth-service/
 nft-service/
@@ -176,102 +141,81 @@ payment-service/
 frontend/
 nginx/
 
-Docker Compose
+SSL-Zertifikate werden mit **Certbot / Let's Encrypt** erstellt.
 
-Verknüpft alle Services inkl. MongoDB-Instanzen:
+---
 
-services:
-  server-auth:
-    build: ./auth-service
-    depends_on:
-      - mongo-auth
-  server-nft:
-    build: ./nft-service
-    depends_on:
-      - mongo-nft
-  server-payment:
-    build: ./payment-service
-    depends_on:
-      - mongo-payment
-  frontend:
-    build: ./frontend
-    depends_on:
-      - server-auth
-      - server-nft
-      - server-payment
-  nginx:
-    build: ./nginx
-    ports:
-      - "80:80"
-      - "443:443"
+## 🔒 Authentifizierung & Sicherheit
 
+- JWT-basierte Auth über Middleware  
+- Zugriffskontrolle nach Rollen (`user`, `creator`, `admin`)  
+- Tokens im Secure Storage  
+- Passwort-Hashing mit bcrypt  
+- CSRF-sichere API-Aufrufe durch Subdomains
 
-SSL-Zertifikate werden über Certbot oder Let's Encrypt eingebunden.
+---
 
-🔒 Authentifizierung & Sicherheit
+## 🧾 Zertifikate & Medien
 
-JWT-basierte Authentifizierung über Middleware in jedem Service
+### 📤 Uploads
+- Multer verarbeitet lokale Uploads  
+- Cloudinary hostet die Bilder  
+- Dateigrößen- und Formatvalidierung integriert  
 
-Zugriffskontrolle nach Rollen (user, creator, admin)
+### 📄 Zertifikate
+- PDF-Generierung über **pdfkit** oder **Puppeteer**  
+- Zertifikate enthalten Käufername, NFT-ID, Creator, Datum & Transaktions-ID  
 
-Tokens werden clientseitig im Secure Storage gehalten
+---
 
-Passwort-Hashing mit bcrypt
+## 💳 Stripe Sandbox Testdaten
 
-CSRF-vermeidende API-Aufrufe durch getrennte Subdomains
+**Testkarte (Visa):**
 
-🧾 Zertifikate & Medien
-
-Uploads:
-
-Multer verarbeitet lokale Uploads
-
-Cloudinary übernimmt das Hosten der Bilder
-
-Dateigrößenlimit & Formatprüfung integriert
-
-Zertifikate:
-
-Nach erfolgreichem Kauf wird ein PDF erstellt (pdfkit oder Puppeteer)
-
-Zertifikate enthalten Käufername, NFT-ID, Creator, Datum und Stripe-Transaktions-ID
-
-💳 Stripe Sandbox Testdaten
-
-Testkarte (Visa):
-
-Card Number: 4242 4242 4242 4242
+4242 4242 4242 4242
 CVC: 424
-Expiry: beliebig in der Zukunft
+Expiry: beliebig in Zukunft
 ZIP: 42424
 
+→ Reine Testumgebung, keine echten Zahlungen.
 
-Kein echtes Geld, reine Sandbox-Testumgebung.
+---
 
-🖥️ Lokale Entwicklung
-Starten
-docker-compose up --build
+### 📚 Technologien im Überblick
 
-📚 Technologien im Überblick
-Kategorie	Technologien
-Frontend	React, Tailwind CSS, Axios, Vite
-Backend	Node.js, Express, Mongoose
-Auth & Security	JWT, bcrypt
-Datenbanken	MongoDB
-File Handling	Multer, Cloudinary
-Zahlungen	Stripe (Sandbox, Webhooks, Subscriptions)
-PDF-Generierung	pdfkit, Puppeteer
-Containerisierung	Docker, Docker Compose
-Reverse Proxy / SSL	Nginx, Certbot
-Sonstiges	axios, dotenv, node-cron
+# Frontend	
+- React, Tailwind CSS, Axios, Vite
+# Backend
+- Node.js, Express, Mongoose
+# Auth & Security
+- JWT, bcrypt
+# Datenbanken
+- MongoDB
+# File Handling
+- Multer, Cloudinary
+# Zahlungen	
+- Stripe (Sandbox, Webhooks, Subscriptions)
+# PDF-Generierung
+- pdfkit, Puppeteer
+# Containerisierung
+- Docker
+# Reverse Proxy / SSL	
+- Nginx, Certbot
+# Sonstiges
+- axios, dotenv, node-cron
+
 📸 Admin-Demo
+Der Admin-Bereich wird nicht öffentlich bereitgestellt.
+Ein Screenshot dient nur zur Demonstration von:
 
-Der Adminbereich wird nicht öffentlich bereitgestellt, sondern nur als Screenshot-Vorschau gezeigt, um die Sicherheitsstruktur zu verdeutlichen.
-Er dient zur Demonstration von Nutzerverwaltung, Zahlungsverläufen und Systemlogs.
+Nutzerverwaltung
+
+Zahlungsverläufen
+
+Systemlogs
 
 🧠 Fazit
-
-NFT-Hub ist ein lernorientiertes Showcase-Projekt mit Fokus auf:
+- NFT-Hub ist ein lernorientiertes Showcase-Projekt mit Fokus auf:
 
 Microservice-Kommunikation
 
@@ -281,4 +225,5 @@ Cloud-basierte Dateiverwaltung
 
 Stripe-Integration
 
-Deployment mit Docker
+Docker-Deployment
+
