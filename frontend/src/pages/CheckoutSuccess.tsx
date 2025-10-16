@@ -64,7 +64,7 @@ export default function CheckoutSuccess() {
 
       try {
         // EINMAL Order prüfen
-        const { data } = await http.get<Order>(`/api/payment/checkout/order-by-session/${sessionId}`);
+        const { data } = await http.get<Order>(`/checkout/order-by-session/${sessionId}`);
         setMode("order");
         setOrder(data);
 

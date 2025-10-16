@@ -70,7 +70,7 @@ export default function CreatorDashboard() {
     queryKey: ["creator-nfts", user?._id],
     enabled: !!user, // nur wenn eingeloggt
     queryFn: async () => {
-      const { data } = await httpNft.get<NFT[]>("/api/nft/mine");
+      const { data } = await httpNft.get<NFT[]>("/mine");
       return data;
     },
   });
@@ -120,7 +120,7 @@ export default function CreatorDashboard() {
 
   const createNft = useMutation({
     mutationFn: async (formData: FormData) => {
-      const { data } = await httpNft.post<NFT>("/api/nft/upload", formData, {
+      const { data } = await httpNft.post<NFT>("/upload", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       return data;
@@ -175,7 +175,7 @@ export default function CreatorDashboard() {
   } = useQuery({
     queryKey: ["creator-orders", { orderStatus, orderPage, orderLimit, orderQ }],
     queryFn: async (): Promise<OrdersResponse> => {
-      const { data } = await http.get<OrdersResponse>("/api/creator/orders", {
+      const { data } = await http.get<OrdersResponse>("/creator/orders", {
         params: { status: orderStatus, page: orderPage, limit: orderLimit, q: orderQ },
       });
       return data;

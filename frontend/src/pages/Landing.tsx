@@ -14,18 +14,26 @@ type NFT = {
 };
 
 export default function Landing() {
-    const { data, isLoading, isError } = useQuery({
-        queryKey: ["nfts", "landing"],
-        queryFn: async () =>
-            (await httpNft.get<NFT[]>("/api/nft", {
-                params: { onlyAvailable: true, limit: 6 },
-            })).data,
-    });
+  const { data, isLoading, isError } = useQuery<NFT[], Error>({
+    queryKey: ["nfts", "landing"],
+    queryFn: async () => {
+      const res = await httpNft.get<NFT[] | { items: NFT[] } | { data: NFT[] }>(
+        "/",
+        { params: { onlyAvailable: true, limit: 6 } }
+      );
+      const raw = res.data as NFT[] | { items: NFT[] } | { data: NFT[] };
+      if (Array.isArray(raw)) return raw;
+      if (Array.isArray((raw as any)?.items)) return (raw as any).items as NFT[];
+      if (Array.isArray((raw as any)?.data))  return (raw as any).data  as NFT[];
+      return [];
+    },
+  });
 
-    // Serverseitig gefiltert (onlyAvailable=true). Fallback: clientseitig absichern.
-    const featured = (data ?? [])
-        .filter((n) => !n.isSoldOut && n.editionCount < n.editionLimit)
-        .slice(0, 6);
+  // Serverseitig gefiltert (onlyAvailable=true). Fallback: clientseitig absichern.
+  const list = data ?? [];
+  const featured = list
+    .filter((n) => !n.isSoldOut && (n.editionCount ?? 0) < (n.editionLimit ?? 0))
+    .slice(0, 6);
 
     return (
         <div className="space-y-12">

@@ -1,16 +1,9 @@
 import Order from '../models/order.model.js';
 import axios from 'axios'
+import { NFT_URL } from "../config/serviceURLs.js";
 
 
-function sanitizeBaseUrl(v) {
-  let s = (v || "").trim();
-  if (!s) return "http://nft-service:3002";     // Fallback auf Service-Namen
-  if (!/^https?:\/\//i.test(s)) s = "http://" + s; // fehlendes Protokoll ergänzen
-  s = s.replace(/\/+$/, "");                    // trailing slashes abschneiden
-  return s;
-}
 
-const NFT_BASE_URL = sanitizeBaseUrl(process.env.NFT_URL);
 
 export const getMyOrders = async (req, res) => {
   try {
@@ -232,7 +225,7 @@ async function adjustNftSold(nftId, delta) {
   const payload = { delta };
 
   const urls = [
-    `${NFT_BASE_URL}/api/nft/${safeId}/sold`,             // primär (ENV)
+    `${NFT_URL}/api/nft/${safeId}/sold`,             // primär (ENV)
     `http://nft-service:3002/api/nft/${safeId}/sold`,     // Fallback im Compose-Netz
   ];
 

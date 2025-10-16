@@ -61,7 +61,7 @@ export const useAuthState = create<State>()(
 
       fetchMe: async () => {
         try {
-          const { data } = await httpAuth.get("/api/auth/me");
+          const { data } = await httpAuth.get("/me");
           set({ user: data });
           return data;
         } catch {
@@ -71,7 +71,7 @@ export const useAuthState = create<State>()(
       },
 
       login: async (email, password) => {
-        const { data } = await httpAuth.post("/api/auth/login", { email, password });
+        const { data } = await httpAuth.post("/login", { email, password });
         set({ token: data.token });
         await get().fetchMe();
       },
@@ -88,13 +88,13 @@ export const useAuthState = create<State>()(
         if (profileInfo?.trim()) payload.profileInfo = profileInfo.trim();
         if (avatarUrl?.trim()) payload.avatarUrl = avatarUrl.trim();
 
-        const { data } = await httpAuth.post("/api/auth/register", payload);
+        const { data } = await httpAuth.post("/register", payload);
         set({ token: data.token });
         await get().fetchMe();
       },
 
       updateProfile: async (patch: Patch) => {
-        const { data } = await httpAuth.patch("api/auth/me", patch);
+        const { data } = await httpAuth.patch("/me", patch);
         const prev = get().user || ({} as User);
         set({ user: { ...prev, ...data } });
       },

@@ -2,6 +2,7 @@ import NFT from '../models/nft.js';
 import cloudinary from '../config/cloudinary.js';
 import axios from 'axios';
 import crypto from 'crypto';
+import { AUTH_URL, PAYMENT_URL } from '../config/serviceURLs.js';
 
 
 export const uploadNFT = async (req, res) => {
@@ -86,7 +87,7 @@ export const downloadNFT = async (req, res) => {
 
   try {
     // 1. Ownership check beim Payment-Service
-    const ownershipCheck = await axios.get(`http://payment-service:3003/api/ownership/${nftId}/${userId}`);
+    const ownershipCheck = await axios.get(`${PAYMENT_URL}/api/ownership/${nftId}/${userId}`);
     if (ownershipCheck.data.isOwner !== true) {
       return res.status(403).json({ message: 'You are not authorized to download this NFT.' });
     }
@@ -228,7 +229,7 @@ export const getNFTById = async (req, res) => {
     }
 
     // Creator-Daten vom auth-service holen
-    const response = await axios.get(`http://server-auth:3001/api/auth/user/${nft.creatorId}`);
+    const response = await axios.get(`${AUTH_URL}/api/auth/user/${nft.creatorId}`);
 
     const creator = response.data;
 
@@ -291,7 +292,7 @@ export const getCreatorProfile = async (req, res) => {
     const nfts = await NFT.find({ creatorId }).sort({ createdAt: -1 });
 
     // Auth-Service aufrufen (lokal!)
-    const authRes = await axios.get(`http://localhost:3001/api/auth/user/${creatorId}`);
+    const authRes = await axios.get(`${AUTH_URL}/api/auth/user/${creatorId}`);
     const creator = authRes.data;
 
     res.status(200).json({ creator, nfts });

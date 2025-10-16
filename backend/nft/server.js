@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 import DBconnection from './config/db.js';
 import nftRoutes from './routes/nft.routes.js';
 
-dotenv.config();
+dotenv.config({path:"./config/.env"});
 
 const app = express();
 const PORT = process.env.PORT || 3002;

@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
+import { AUTH_URL } from '../config/serviceURLs.js';
 
 export const verifyToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -15,7 +16,7 @@ export const verifyToken = async (req, res, next) => {
     jwt.verify(token, process.env.JWT_SECRET);
 
     // 🛰 Echten User vom Auth-Service holen
-    const response = await axios.get('http://server-auth:3001/api/auth/me', {
+    const response = await axios.get(`${AUTH_URL}/api/auth/me`, {
       headers: {
         Authorization: `Bearer ${token}`
       }

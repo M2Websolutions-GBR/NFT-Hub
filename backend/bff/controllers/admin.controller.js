@@ -180,7 +180,7 @@ export const listOrders = async (req, res) => {
     if (nftId) params.nftId = nftId;
     if (limit) params.limit = limit;
 
-    const { data } = await axios.get(`${PAYMENT_URL}/api/orders`, {
+    const { data } = await axios.get(`${PAYMENT_URL}/api/payment/orders`, {
       ...authHeaders(req),
       params,
     });
@@ -199,7 +199,7 @@ export const refundOrder = async (req, res) => {
     const { reason } = req.body;
 
     const { data } = await axios.patch(
-      `${PAYMENT_URL}/api/orders/${id}/refund`,
+      `${PAYMENT_URL}/api/admin/orders/${id}/refund`,
       { reason: reason || undefined },
       authHeaders(req),
     );
@@ -218,7 +218,7 @@ export const voidOrder = async (req, res) => {
     const { reason } = req.body;
 
     const { data } = await axios.patch(
-      `${PAYMENT_URL}/api/orders/${id}/void`,
+      `${PAYMENT_URL}/api/admin/orders/${id}/void`,
       { reason: reason || undefined },
       authHeaders(req),
     );
