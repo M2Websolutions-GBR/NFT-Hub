@@ -252,18 +252,6 @@ Kein echtes Geld, reine Sandbox-Testumgebung.
 Starten
 docker-compose up --build
 
-Zugriff
-
-Frontend: https://localhost
-
-Auth-Service: http://localhost:5000
-
-NFT-Service: http://localhost:5001
-
-Payment-Service: http://localhost:5002
-
-MongoDB: je nach Service-Port
-
 📚 Technologien im Überblick
 Kategorie	Technologien
 Frontend	React, Tailwind CSS, Axios, Vite
